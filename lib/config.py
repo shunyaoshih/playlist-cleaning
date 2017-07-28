@@ -23,7 +23,7 @@ def params_setup():
     parser.add_argument('--max_len', type=int, default=50, help='real_len + 1')
     parser.add_argument('--debug', type=int, default=0, help='')
     parser.add_argument('--beam_search', type=int, default=1, help='')
-    parser.add_argument('--beam_width', type=int, default=2, help='')
+    parser.add_argument('--beam_width', type=int, default=0, help='')
     parser.add_argument('--num_samples', type=int, default=0, help='')
     parser.add_argument('--dropout', type=float, default=0.2, help='')
     parser.add_argument("--start_decay_step", type=int, default=0, help='')

@@ -12,10 +12,10 @@ from tensorflow.python.util import nest
 
 from lib.utils import read_num_of_seqs
 
-__all__ = ['Sea2Seq']
+__all__ = ['Multi_Task_Sea2Seq']
 
-class Seq2Seq():
-    """ a seq2seq model """
+class Multi_Task_Seq2Seq():
+    """ a multi-task seq2seq model """
 
     def __init__(self, para):
         self.para = para
@@ -30,17 +30,20 @@ class Seq2Seq():
             print('build training graph')
             self.para.mode = 'train'
             self.set_input()
-            self.build_encoder()
+            self.build_playlist_encoder()
+            self.build_seed_song_encoder()
+            self.build_concat_layer()
             self.build_decoder()
             self.build_optimizer()
 
         tf.get_variable_scope().reuse_variables()
+        self.para.mode = 'test'
         self.para.batch_size = read_num_of_seqs()
         with tf.name_scope('test'):
             print('build testing graph')
-            self.para.mode = 'test'
             self.set_input()
-            self.build_encoder()
+            self.build_playlist_encoder()
+            self.build_seed_song_encoder()
             self.build_decoder()
 
         self.para.mode = original_mode
@@ -50,13 +53,15 @@ class Seq2Seq():
         print('set input nodes...')
         if self.para.mode == 'train':
             self.raw_encoder_inputs, self.raw_encoder_inputs_len, \
-            self.raw_decoder_inputs, self.raw_decoder_inputs_len = \
-                self.read_batch_sequences()
+            self.raw_decoder_inputs, self.raw_decoder_inputs_len, \
+            self.raw_seed_song_inputs = self.read_batch_sequences()
 
             # self.encoder_inputs: [batch_size, max_len]
             self.encoder_inputs = self.raw_encoder_inputs[:, 1:]
             # self.encdoer_inputs_len: [batch_size]
             self.encoder_inputs_len = self.raw_encoder_inputs_len
+            # self.seed_song_inputs: [batch_size]
+            self.seed_song_inputs = self.raw_seed_song_inputs
             # self.decoder_inputs: [batch_size, decoder_max_len]
             self.decoder_inputs = self.raw_decoder_inputs[:, :-1]
             # self.decoder_inputs_len: [batch_size]
@@ -76,10 +81,15 @@ class Seq2Seq():
                 dtype=tf.int32,
                 shape=(None,)
             )
+            # self.seed_song_inputs: [batch_size]
+            self.seed_song_inputs = tf.placeholder(
+                dtype=tf.int64,
+                shape=(None,)
+            )
 
-    def build_encoder(self):
-        print('build encoder...')
-        with tf.variable_scope('encoder'):
+    def build_playlist_encoder(self):
+        print('build playlist encoder...')
+        with tf.variable_scope('playlist_encoder'):
             self.encoder_cell = self.build_encoder_cell()
 
             self.encoder_embedding = tf.get_variable(
@@ -97,6 +107,46 @@ class Seq2Seq():
                 sequence_length=self.encoder_inputs_len,
                 dtype=self.dtype,
             )
+
+    def build_seed_song_encoder(self):
+        print('build seed song encoder...')
+        with tf.variable_scope('seed_song_encoder'):
+            # self.seed_song_one_hot: [batch_size, encoder_vocab_size]
+            self.seed_song_one_hot = tf.one_hot(
+                indices=self.seed_song_inputs,
+                depth=self.encoder_vocab_size
+            )
+            # self.seed_song_projected: [batch_size, embedding_size]
+            self.seed_song_projected = dense(
+                inputs=self.seed_song_one_hot,
+                units=self.embedding_size,
+                name='seed_song_projection'
+            )
+
+    def build_concat_layer(self):
+        # self.seed_song_projected: [batch_size, 1, embedding_size]
+        self.seed_song_projected = tf.expand_dims(
+            input=self.seed_song_projected,
+            axis=1
+        )
+        # self.seed_song_projected_tiled: [batch_size, max_len, embedding_size]
+        self.seed_song_projected_tiled = tf.tile(
+            input=self.seed_song_projected_tiled,
+            multiples=[0, self.para.max_len, 0],
+        )
+        # self.encoder_outputs: [batch_size, max_len, num_units]
+        # self.concat_encoder_outputs:
+        # [batch_size, max_len, num_units + embedding_size]
+        self.encoder_outputs_concated = tf.concat(
+            values=[self.encoder_outputs, self.seed_song_projected_tiled],
+            axis=2,
+        )
+        self.encoder_outputs_concated_projected = dense(
+            inputs=self.encoder_outputs_concated_projected,
+            units=self.num_units,
+            name='concat_projection'
+        )
+
 
     def build_decoder(self):
         print('build decoder...')
@@ -117,7 +167,7 @@ class Seq2Seq():
             if self.para.mode == 'train':
                 self.decoder_inputs_embedded = tf.nn.embedding_lookup(
                     params=self.decoder_embedding,
-                    ids=self.encoder_inputs
+                    ids=self.decoder_inputs
                 )
 
                 if self.para.scheduled_sampling == 0:
@@ -277,13 +327,13 @@ class Seq2Seq():
            [self.build_single_cell() for i in range(self.para.num_layers)]
 
         if self.para.mode == 'train':
-            encoder_outputs = self.encoder_outputs
+            encoder_outputs = self.encoder_outputs_concated_projected
             encoder_inputs_len = self.encoder_inputs_len
             encoder_states = self.encoder_states
             batch_size = self.para.batch_size
         else:
             encoder_outputs = seq2seq.tile_batch(
-                self.encoder_outputs,
+                self.encoder_outputs_concated_projected,
                 multiplier=self.para.beam_width
             )
             encoder_inputs_len = seq2seq.tile_batch(
@@ -339,28 +389,27 @@ class Seq2Seq():
 
         file_queue = tf.train.string_input_producer(['./data/train.tfrecords'])
 
-        ei, ei_len, di, di_len = self.read_one_sequence(file_queue)
+        ei, ei_len, di, di_len, sid = self.read_one_sequence(file_queue)
 
         min_after_dequeue = 3000
         capacity = min_after_dequeue + 3 * self.para.batch_size
 
-        encoder_inputs, encoder_inputs_len, decoder_inputs, decoder_inputs_len = \
-            tf.train.shuffle_batch(
-                [ei, ei_len, di, di_len],
-                batch_size=self.para.batch_size,
-                capacity=capacity,
-                min_after_dequeue=min_after_dequeue
-            )
-        encoder_inputs = tf.sparse_tensor_to_dense(tf.to_int64(encoder_inputs))
-        decoder_inputs = tf.sparse_tensor_to_dense(tf.to_int64(decoder_inputs))
+        encoder_inputs, encoder_inputs_len, decoder_inputs, decoder_inputs_len,
+        seed_ids = tf.train.shuffle_batch(
+            [ei, ei_len, di, di_len, sid],
+            batch_size=self.para.batch_size,
+            capacity=capacity,
+            min_after_dequeue=min_after_dequeue
+        )
+        encoder_inputs = tf.sparse_tensor_to_dense(encoder_inputs)
+        decoder_inputs = tf.sparse_tensor_to_dense(decoder_inputs)
 
         encoder_inputs_len = tf.reshape(encoder_inputs_len,
                                         [self.para.batch_size])
         decoder_inputs_len = tf.reshape(decoder_inputs_len,
                                         [self.para.batch_size])
         return encoder_inputs, tf.to_int32(encoder_inputs_len), \
-               decoder_inputs, tf.to_int32(decoder_inputs_len)
-
+               decoder_inputs, tf.to_int32(decoder_inputs_len), seed_ids
 
     def read_one_sequence(self, file_queue):
         """ read one sequence from .tfrecords"""
@@ -373,8 +422,10 @@ class Seq2Seq():
             'encoder_input': tf.VarLenFeature(tf.int64),
             'encoder_input_len': tf.FixedLenFeature([1], tf.int64),
             'decoder_input': tf.VarLenFeature(tf.int64),
-            'decoder_input_len': tf.FixedLenFeature([1], tf.int64)
+            'decoder_input_len': tf.FixedLenFeature([1], tf.int64),
+            'seed_ids': tf.FixedLenFeature([1], tf.int64)
         })
 
         return feature['encoder_input'], feature['encoder_input_len'], \
-               feature['decoder_input'], feature['decoder_input_len']
+               feature['decoder_input'], feature['decoder_input_len'], \
+               feature['seed_ids']
