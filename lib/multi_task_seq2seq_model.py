@@ -69,6 +69,7 @@ class Multi_Task_Seq2Seq():
             # self.decoder_targets: [batch_size, max_len]
             self.decoder_targets = self.raw_decoder_inputs[:, 1:]
 
+            self.predict_count = tf.reduce_sum(self.decoder_inputs_len)
         elif self.para.mode == 'test':
             # self.encoder_inputs: [batch_size, max_len]
             self.encoder_inputs = tf.placeholder(
