@@ -288,7 +288,7 @@ class Multi_Task_Seq2Seq():
     def compute_loss(self, logits, labels):
         """
             logits: [batch_size, max_len, decoder_vocab_size]
-            labels: [batch_size, max_len, decoder_vocab_size]
+            labels: [batch_size, max_len]
         """
         crossent = tf.nn.sparse_softmax_cross_entropy_with_logits(
             labels=labels,
@@ -302,7 +302,6 @@ class Multi_Task_Seq2Seq():
         )
         loss = tf.reduce_sum(crossent * self.masks) / \
                tf.to_float(self.para.batch_size)
-
         return loss
 
     def sampled_softmax_loss(self):
@@ -387,7 +386,7 @@ class Multi_Task_Seq2Seq():
     def read_batch_sequences(self):
         """ read a batch from .tfrecords """
 
-        file_queue = tf.train.string_input_producer(['./data/train.tfrecords'])
+        file_queue = tf.train.string_input_producer(['./data/rnn_train.tfrecords'])
 
         ei, ei_len, di, di_len, sid = self.read_one_sequence(file_queue)
 

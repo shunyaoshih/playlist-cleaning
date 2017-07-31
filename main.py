@@ -10,6 +10,7 @@ import numpy as np
 from lib.config import params_setup
 from lib.utils import read_testing_sequences, word_id_to_song_id
 from lib.multi_task_seq2seq_model import Multi_Task_Seq2Seq
+from lib.srcnn_model import SRCNN
 
 def config_setup():
     config = tf.ConfigProto()
@@ -27,10 +28,9 @@ if __name__ == "__main__":
         if para.nn == 'rnn':
             with tf.variable_scope('model', reuse=None, initializer=initializer):
                 model = Multi_Task_Seq2Seq(para)
-        else:
-            # with tf.variable_scope('model', reuse=None, initializer=initializer):
-            #     model = Seq2Seq(para)
-            pass
+        elif para.nn == 'cnn':
+            with tf.variable_scope('model', reuse=None, initializer=initializer):
+                model = SRCNN(para)
 
         try:
             os.makedirs(para.model_dir)
@@ -60,7 +60,7 @@ if __name__ == "__main__":
                     step_time += (time.time() - start_time)
                     if step % para.steps_per_stats == 0:
                         print('step: %d, perplexity: %.2f step_time: %.2f' %
-                              (step, perplexity, step_time / para.steps_per_stats))
+                            (step, perplexity, step_time / para.steps_per_stats))
                         step_time = 0
                     step += 1
 
@@ -68,19 +68,23 @@ if __name__ == "__main__":
                 encoder_inputs, encoder_inputs_len, seed_song_inputs = \
                     read_testing_sequences(para)
 
-                [predicted_ids, decoder_outputs] = sess.run(
-                    fetches=[
-                        model.decoder_predicted_ids,
-                        model.decoder_outputs,
-                    ],
-                    feed_dict={
-                        model.encoder_inputs: encoder_inputs,
-                        model.encoder_inputs_len: encoder_inputs_len,
-                        model.seed_song_inputs: seed_song_inputs
-                    }
-                )
-                print(predicted_ids.shape)
+                if para.nn == 'rnn':
+                    [predicted_ids, decoder_outputs] = sess.run(
+                        fetches=[
+                            model.decoder_predicted_ids,
+                            model.decoder_outputs,
+                        ],
+                        feed_dict={
+                            model.encoder_inputs: encoder_inputs,
+                            model.encoder_inputs_len: encoder_inputs_len,
+                            model.seed_song_inputs: seed_song_inputs
+                        }
+                    )
+                    print(predicted_ids.shape)
 
-                output_file = open('results/out.txt', 'w')
-                output_file.write(word_id_to_song_id(para, predicted_ids))
-                output_file.close()
+                    output_file = open('results/out.txt', 'w')
+                    output_file.write(word_id_to_song_id(para, predicted_ids))
+                    output_file.close()
+                elif para.nn == 'cnn':
+                    # TODO
+                    pass

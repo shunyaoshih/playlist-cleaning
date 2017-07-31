@@ -1,0 +1,7 @@
+lib/__pycache__/
+*.txt
+results/
+rnn_models/
+cnn_models/
+*.tfrecords
+data/raw/
