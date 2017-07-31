@@ -9,7 +9,7 @@ import tensorflow.contrib.seq2seq as seq2seq
 from tensorflow.contrib.seq2seq.python.ops import attention_wrapper
 from tensorflow.python.layers.core import Dense, dense
 
-from lib.utils import read_num_of_seqs
+from lib.utils import read_num_of_lines
 
 __all__ = ['Multi_Task_Sea2Seq']
 
@@ -37,7 +37,7 @@ class Multi_Task_Seq2Seq():
 
         tf.get_variable_scope().reuse_variables()
         self.para.mode = 'test'
-        self.para.batch_size = read_num_of_seqs()
+        self.para.batch_size = read_num_of_lines('results/in.txt')
         with tf.name_scope('test'):
             print('build testing graph')
             self.set_input()
@@ -69,7 +69,6 @@ class Multi_Task_Seq2Seq():
             # self.decoder_targets: [batch_size, max_len]
             self.decoder_targets = self.raw_decoder_inputs[:, 1:]
 
-            self.predict_count = tf.reduce_sum(self.decoder_inputs_len)
         elif self.para.mode == 'test':
             # self.encoder_inputs: [batch_size, max_len]
             self.encoder_inputs = tf.placeholder(

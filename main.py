@@ -8,6 +8,7 @@ import tensorflow as tf
 import numpy as np
 
 from lib.config import params_setup
+from lib.utils import read_testing_sequences, word_id_to_song_id
 from lib.multi_task_seq2seq_model import Multi_Task_Seq2Seq
 
 def config_setup():
@@ -64,7 +65,8 @@ if __name__ == "__main__":
                     step += 1
 
             elif para.mode == 'test':
-                encoder_inputs, encoder_inputs_len = read_testing_sequences(para)
+                encoder_inputs, encoder_inputs_len, seed_song_inputs = \
+                    read_testing_sequences(para)
 
                 [predicted_ids, decoder_outputs] = sess.run(
                     fetches=[
@@ -73,21 +75,12 @@ if __name__ == "__main__":
                     ],
                     feed_dict={
                         model.encoder_inputs: encoder_inputs,
-                        model.encoder_inputs_len: encoder_inputs_len
+                        model.encoder_inputs_len: encoder_inputs_len,
+                        model.seed_song_inputs: seed_song_inputs
                     }
                 )
-                scores = cal_scores(
-                    para,
-                    predicted_ids,
-                    decoder_outputs.beam_search_decoder_output.scores
-                )
                 print(predicted_ids.shape)
-                print(scores)
 
-                output_file = open('test/out.txt', 'w')
+                output_file = open('results/out.txt', 'w')
                 output_file.write(word_id_to_song_id(para, predicted_ids))
-                output_file.close()
-
-                output_file = open('test/scores.txt', 'w')
-                output_file.write('\n'.join(scores))
                 output_file.close()

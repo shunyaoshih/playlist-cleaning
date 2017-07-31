@@ -2,6 +2,8 @@
 
 import argparse
 
+from lib.utils import read_num_of_lines
+
 def params_setup():
     """ arguments definition """
 
@@ -37,10 +39,8 @@ def params_setup():
 
     para = parser.parse_args()
 
-    para.encoder_vocab_size = len(open('data/vocab_default.txt',
-                                       'r').read().splitlines())
-    para.decoder_vocab_size = len(open('data/vocab_default.txt',
-                                       'r').read().splitlines())
+    para.encoder_vocab_size = read_num_of_lines('data/vocab_default.txt')
+    para.decoder_vocab_size = read_num_of_lines('data/vocab_default.txt')
 
     if para.debug == 1:
         para.num_units = 2
