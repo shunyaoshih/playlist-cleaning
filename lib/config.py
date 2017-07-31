@@ -20,10 +20,10 @@ def params_setup():
     parser.add_argument('--encoder_vocab_size', type=int, default=30000, help='')
     parser.add_argument('--decoder_vocab_size', type=int, default=86000, help='')
     parser.add_argument('--embedding_size', type=int, default=128, help='')
-    parser.add_argument('--max_len', type=int, default=50, help='real_len + 1')
+    parser.add_argument('--max_len', type=int, default=201, help='real_len + 1')
     parser.add_argument('--debug', type=int, default=0, help='')
     parser.add_argument('--beam_search', type=int, default=1, help='')
-    parser.add_argument('--beam_width', type=int, default=0, help='')
+    parser.add_argument('--beam_width', type=int, default=1, help='')
     parser.add_argument('--num_samples', type=int, default=0, help='')
     parser.add_argument('--dropout', type=float, default=0.2, help='')
     parser.add_argument("--start_decay_step", type=int, default=0, help='')
@@ -37,9 +37,18 @@ def params_setup():
 
     para = parser.parse_args()
 
-    para.encoder_vocab_size = len(open('data/vocab_default.in',
+    para.encoder_vocab_size = len(open('data/vocab_default.txt',
                                        'r').read().splitlines())
-    para.decoder_vocab_size = len(open('data/vocab_default.ou',
+    para.decoder_vocab_size = len(open('data/vocab_default.txt',
                                        'r').read().splitlines())
+
+    if para.debug == 1:
+        para.num_units = 2
+        para.num_layers = 2
+        para.batch_size = 2
+        para.embedding_size = 2
+    if para.mode == 'test':
+        para.dropout = 0.0
+    para.model_dir = './' + para.nn + '_' + para.model_dir
 
     return para

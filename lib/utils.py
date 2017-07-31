@@ -32,7 +32,7 @@ def numpy_array_to_list(array):
         return array
 
 def read_num_of_seqs():
-    seqs = open('test/in.txt', 'r').read().splitlines()
+    seqs = open('results/in.txt', 'r').read().splitlines()
     return len(seqs)
 
 def check_alternatives(word, alt_dict):

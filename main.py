@@ -7,6 +7,9 @@ import time
 import tensorflow as tf
 import numpy as np
 
+from lib.config import params_setup
+from lib.multi_task_seq2seq_model import Multi_Task_Seq2Seq
+
 def config_setup():
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
@@ -16,29 +19,26 @@ def config_setup():
 if __name__ == "__main__":
     para = params_setup()
 
-    if para.debug == 1:
-        para.num_units = 2
-        para.num_layers = 2
-        para.batch_size = 2
-        para.embedding_size = 2
-    if para.mode == 'test':
-        para.dropout = 0.0
-
     with tf.Graph().as_default():
         initializer = tf.random_uniform_initializer(
             -para.init_weight, para.init_weight
         )
-        with tf.variable_scope('model', reuse=None, initializer=initializer):
-            model = Seq2Seq(para)
+        if para.nn == 'rnn':
+            with tf.variable_scope('model', reuse=None, initializer=initializer):
+                model = Multi_Task_Seq2Seq(para)
+        else:
+            # with tf.variable_scope('model', reuse=None, initializer=initializer):
+            #     model = Seq2Seq(para)
+            pass
 
         try:
             os.makedirs(para.model_dir)
         except os.error:
             pass
         print(para)
-        sv = tf.train.Supervisor(logdir='./' + para.nn + '_' _ para.model_dir)
+        sv = tf.train.Supervisor(logdir=para.model_dir)
         with sv.managed_session(config=config_setup()) as sess:
-            para_file = open('%s/para.txt' % para.model_dir, 'w')
+            para_file = open('%s/para.txt' % (para.model_dir), 'w')
             para_file.write(str(para))
             para_file.close()
             if para.mode == 'train':

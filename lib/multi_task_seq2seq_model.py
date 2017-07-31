@@ -8,7 +8,6 @@ import tensorflow as tf
 import tensorflow.contrib.seq2seq as seq2seq
 from tensorflow.contrib.seq2seq.python.ops import attention_wrapper
 from tensorflow.python.layers.core import Dense, dense
-from tensorflow.python.util import nest
 
 from lib.utils import read_num_of_seqs
 
@@ -44,6 +43,7 @@ class Multi_Task_Seq2Seq():
             self.set_input()
             self.build_playlist_encoder()
             self.build_seed_song_encoder()
+            self.build_concat_layer()
             self.build_decoder()
 
         self.para.mode = original_mode
@@ -114,39 +114,39 @@ class Multi_Task_Seq2Seq():
             # self.seed_song_one_hot: [batch_size, encoder_vocab_size]
             self.seed_song_one_hot = tf.one_hot(
                 indices=self.seed_song_inputs,
-                depth=self.encoder_vocab_size
+                depth=self.para.encoder_vocab_size
             )
             # self.seed_song_projected: [batch_size, embedding_size]
             self.seed_song_projected = dense(
                 inputs=self.seed_song_one_hot,
-                units=self.embedding_size,
+                units=self.para.embedding_size,
                 name='seed_song_projection'
             )
 
     def build_concat_layer(self):
-        # self.seed_song_projected: [batch_size, 1, embedding_size]
-        self.seed_song_projected = tf.expand_dims(
-            input=self.seed_song_projected,
-            axis=1
+        # self.seed_song_projected_tiled: [batch_size * max_len, embedding_size]
+        self.seed_song_projected_tiled = seq2seq.tile_batch(
+            self.seed_song_projected,
+            multiplier=self.para.max_len
         )
         # self.seed_song_projected_tiled: [batch_size, max_len, embedding_size]
-        self.seed_song_projected_tiled = tf.tile(
-            input=self.seed_song_projected_tiled,
-            multiples=[0, self.para.max_len, 0],
+        self.seed_song_projected_tiled = tf.reshape(
+            self.seed_song_projected_tiled,
+            [self.para.batch_size, self.para.max_len, self.para.embedding_size]
         )
-        # self.encoder_outputs: [batch_size, max_len, num_units]
         # self.concat_encoder_outputs:
         # [batch_size, max_len, num_units + embedding_size]
         self.encoder_outputs_concated = tf.concat(
             values=[self.encoder_outputs, self.seed_song_projected_tiled],
             axis=2,
         )
+        # self.encoder_outputs_concated_projected:
+        # [batch_size, max_len, num_units]
         self.encoder_outputs_concated_projected = dense(
-            inputs=self.encoder_outputs_concated_projected,
-            units=self.num_units,
-            name='concat_projection'
+           inputs=self.encoder_outputs_concated,
+           units=self.para.num_units,
+           name='concat_projection'
         )
-
 
     def build_decoder(self):
         print('build decoder...')
@@ -160,8 +160,8 @@ class Multi_Task_Seq2Seq():
                 dtype=self.dtype
             )
             output_projection_layer = Dense(
-                units=self.para.decoder_vocab_size,
-                name='output_projection'
+               units=self.para.decoder_vocab_size,
+               name='output_projection'
             )
 
             if self.para.mode == 'train':
@@ -394,7 +394,7 @@ class Multi_Task_Seq2Seq():
         min_after_dequeue = 3000
         capacity = min_after_dequeue + 3 * self.para.batch_size
 
-        encoder_inputs, encoder_inputs_len, decoder_inputs, decoder_inputs_len,
+        encoder_inputs, encoder_inputs_len, decoder_inputs, decoder_inputs_len, \
         seed_ids = tf.train.shuffle_batch(
             [ei, ei_len, di, di_len, sid],
             batch_size=self.para.batch_size,
