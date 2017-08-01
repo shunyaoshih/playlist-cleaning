@@ -68,23 +68,19 @@ if __name__ == "__main__":
                 encoder_inputs, encoder_inputs_len, seed_song_inputs = \
                     read_testing_sequences(para)
 
-                if para.nn == 'rnn':
-                    [predicted_ids, decoder_outputs] = sess.run(
-                        fetches=[
-                            model.decoder_predicted_ids,
-                            model.decoder_outputs,
-                        ],
-                        feed_dict={
-                            model.encoder_inputs: encoder_inputs,
-                            model.encoder_inputs_len: encoder_inputs_len,
-                            model.seed_song_inputs: seed_song_inputs
-                        }
-                    )
-                    print(predicted_ids.shape)
+                [predicted_ids, decoder_outputs] = sess.run(
+                    fetches=[
+                        model.decoder_predicted_ids,
+                        model.decoder_outputs,
+                    ],
+                    feed_dict={
+                        model.encoder_inputs: encoder_inputs,
+                        model.encoder_inputs_len: encoder_inputs_len,
+                        model.seed_song_inputs: seed_song_inputs
+                    }
+                )
+                print(predicted_ids.shape)
 
-                    output_file = open('results/out.txt', 'w')
-                    output_file.write(word_id_to_song_id(para, predicted_ids))
-                    output_file.close()
-                elif para.nn == 'cnn':
-                    # TODO
-                    pass
+                output_file = open('results/out.txt', 'w')
+                output_file.write(word_id_to_song_id(para, predicted_ids))
+                output_file.close()

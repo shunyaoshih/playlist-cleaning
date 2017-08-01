@@ -245,10 +245,20 @@ class SRCNN():
             units=self.para.decoder_vocab_size,
             name='output_projection'
         )
-        self.loss = self.compute_loss(
-            logits=self.outputs,
-            labels=self.decoder_targets
-        )
+        if self.para.mode == 'train':
+            self.loss = self.compute_loss(
+                logits=self.outputs,
+                labels=self.decoder_targets
+            )
+        else:
+            # compatible with the rnn model
+            self.decoder_outputs = self.outputs
+            ids = tf.argmax(self.decoder_outputs, axis=2)
+            self.decoder_predicted_ids = tf.reshape(
+                ids,
+                [self.para.batch_size, self.para.max_len, 1]
+            )
+
 
     def build_optimizer(self):
         self.opt = tf.train.AdamOptimizer()
