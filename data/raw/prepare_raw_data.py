@@ -1,10 +1,11 @@
 def read_file(file_name):
     input_file = open(file_name, 'r').read().splitlines()
     input_file = [seq.split(' ') for seq in input_file]
+    input_file = [[word for word in seq if word != 'None'] for seq in input_file]
     return input_file
 
-raw_file = read_file('./raw_data.txt')
-rerank_file = read_file('./rerank_data.txt')
+raw_file = read_file('./x.txt')
+rerank_file = read_file('./y.txt')
 
 raw_dct = {}
 rerank_dct = {}
@@ -15,8 +16,8 @@ for i, seq in enumerate(rerank_file):
     key = seq[0] + ' ' + seq[1]
     rerank_dct[key] = i
 
-x_file = open('./x.txt', 'w')
-y_file = open('./y.txt', 'w')
+x_file = open('./raw_data.txt', 'w')
+y_file = open('./rerank_data.txt', 'w')
 
 for k, v in raw_dct.items():
     if k in rerank_dct:

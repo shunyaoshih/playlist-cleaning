@@ -22,10 +22,10 @@ def convert_to_tf_format():
     for i in range(len(encoder_file)):
         encoder_seq_ids = encoder_file[i].strip().split(' ')
         decoder_seq_ids = decoder_file[i].strip().split(' ')
-        # if len(encoder_seq_ids) == 0 or len(encoder_seq_ids) > 49:
-        #     continue
-        # if len(decoder_seq_ids) == 0 or len(decoder_seq_ids) > 49:
-        #     continue
+        # if len(encoder_seq_ids) == 0 or len(encoder_seq_ids) > 200:
+        #    continue
+        # if len(decoder_seq_ids) == 0 or len(decoder_seq_ids) > 200:
+        #    continue
         encoder_seq_ids = [int(id) for id in encoder_seq_ids if len(id) > 0]
         decoder_seq_ids = [int(id) for id in decoder_seq_ids if len(id) > 0]
 
