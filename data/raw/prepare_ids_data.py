@@ -2,23 +2,29 @@ from collections import defaultdict
 
 _START_VOCAB = ['_PAD', '_BOS', '_EOS', '_UNK']
 
-raw_file = open('./raw_data.txt', 'r').read().splitlines()
-raw_seqs = [seq.split(' ') for seq in raw_file]
-raw_seqs = [seq[1:] for seq in raw_seqs]
+# raw_file = open('./raw_data.txt', 'r').read().splitlines()
+# raw_seqs = [seq.split(' ') for seq in raw_file]
+# raw_seqs = [seq[1:] for seq in raw_seqs]
+# rerank_file = open('./rerank_data.txt', 'r').read().splitlines()
+# rerank_seqs = [seq.split(' ') for seq in rerank_file]
+# rerank_seqs = [seq[1:] for seq in rerank_seqs]
+# raw_seqs.extend(rerank_seqs)
 
-vocab = {}
-for seq in raw_seqs:
-    for word in seq:
-        if word in vocab:
-            vocab[word] += 1
-        else:
-            vocab[word] = 1
-vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
-print('vocab size: {}'.format(len(vocab_list)))
+# vocab = {}
+# for seq in raw_seqs:
+#     for word in seq:
+#         if word in vocab:
+#             vocab[word] += 1
+#         else:
+#             vocab[word] = 1
+# vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
+# print('vocab size: {}'.format(len(vocab_list)))
 
-output_file = open('../vocab_default.txt', 'w')
-output_file.write('\n'.join(vocab_list))
-output_file.close()
+# output_file = open('../vocab_default.txt', 'w')
+# output_file.write('\n'.join(vocab_list))
+# output_file.close()
+
+vocab_list = open('../vocab_default.txt', 'r').read().splitlines()
 
 dct = defaultdict(lambda : 3, [[word, i] for i, word in enumerate(vocab_list)])
 
