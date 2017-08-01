@@ -3,7 +3,10 @@ import numpy as np
 from copy import deepcopy
 from collections import defaultdict
 
-__all__ = ['word_id_to_song_id', 'read_testing_sequences', 'read_num_of_lines']
+__all__ = ['word_id_to_song_id',
+           'read_testing_sequences',
+           'read_num_of_lines',
+           'get_max_len']
 
 dictionary_path = 'data/vocab_default.txt'
 
@@ -26,6 +29,11 @@ def numpy_array_to_list(array):
 def read_num_of_lines(file_name):
     seqs = open(file_name, 'r').read().splitlines()
     return len(seqs)
+
+def get_max_len(file_name):
+    input_file = open(file_name, 'r').read().splitlines()
+    input_file = [seq.split(' ') for seq in input_file]
+    return max([len(seq) for seq in input_file])
 
 def read_testing_sequences(para):
     # filter for smybol that utf8 cannot decode

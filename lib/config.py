@@ -2,7 +2,7 @@
 
 import argparse
 
-from lib.utils import read_num_of_lines
+from lib.utils import read_num_of_lines, get_max_len
 
 def params_setup():
     """ arguments definition """
@@ -19,10 +19,10 @@ def params_setup():
     parser.add_argument('--num_units', type=int, default=128, help='')
     parser.add_argument('--num_layers', type=int, default=2, help='')
     parser.add_argument('--batch_size', type=int, default=128, help='')
-    parser.add_argument('--encoder_vocab_size', type=int, default=30000, help='')
-    parser.add_argument('--decoder_vocab_size', type=int, default=86000, help='')
+    parser.add_argument('--encoder_vocab_size', type=int, default=-1, help='')
+    parser.add_argument('--decoder_vocab_size', type=int, default=-1, help='')
     parser.add_argument('--embedding_size', type=int, default=128, help='')
-    parser.add_argument('--max_len', type=int, default=217, help='')
+    parser.add_argument('--max_len', type=int, default=-1, help='')
     parser.add_argument('--debug', type=int, default=0, help='')
     parser.add_argument('--beam_search', type=int, default=1, help='')
     parser.add_argument('--beam_width', type=int, default=1, help='')
@@ -41,6 +41,7 @@ def params_setup():
 
     para.encoder_vocab_size = read_num_of_lines('data/vocab_default.txt')
     para.decoder_vocab_size = read_num_of_lines('data/vocab_default.txt')
+    para.max_len = get_max_len('data/ids_raw_data.txt')
 
     if para.nn == 'rnn':
         para.max_len += 1
