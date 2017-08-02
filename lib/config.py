@@ -18,7 +18,7 @@ def params_setup():
     parser.add_argument('--max_gradient_norm', type=float, default=5.0, help='')
     parser.add_argument('--num_units', type=int, default=128, help='')
     parser.add_argument('--num_layers', type=int, default=2, help='')
-    parser.add_argument('--batch_size', type=int, default=128, help='')
+    parser.add_argument('--batch_size', type=int, default=32, help='')
     parser.add_argument('--encoder_vocab_size', type=int, default=-1, help='')
     parser.add_argument('--decoder_vocab_size', type=int, default=-1, help='')
     parser.add_argument('--embedding_size', type=int, default=128, help='')
