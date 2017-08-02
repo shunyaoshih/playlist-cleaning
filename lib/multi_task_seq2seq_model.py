@@ -122,11 +122,16 @@ class Multi_Task_Seq2Seq():
                 units=self.para.embedding_size,
                 name='seed_song_projection'
             )
+            # use embedding from the encoder
+            self.seed_song_embedded = tf.nn.embedding_lookup(
+                params=self.encoder_embedding,
+                ids=self.seed_song_inputs
+            )
 
     def build_concat_layer(self):
         # self.seed_song_projected_tiled: [batch_size * max_len, embedding_size]
-        self.seed_song_projected_tiled = seq2seq.tile_batch(
-            self.seed_song_projected,
+        self.seed_song_projected_tiled = seq1seq.tile_batch(
+            self.seed_song_embedded,
             multiplier=self.para.max_len
         )
         # self.seed_song_projected_tiled: [batch_size, max_len, embedding_size]
