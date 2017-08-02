@@ -3,6 +3,7 @@
 from copy import deepcopy
 
 import tensorflow as tf
+import tensorflow.contrib.seq2seq as seq2seq
 from tensorflow.python.layers.core import dense
 
 from lib.utils import read_num_of_lines
@@ -79,6 +80,15 @@ class SRCNN():
             name='encoder_embedding',
             shape=[self.para.encoder_vocab_size, self.para.embedding_size],
             dtype=self.dtype
+        )
+        # self.seed_song_embedded: [batch_size, embedding_size]
+        self.seed_song_embedded = tf.nn.embedding_lookup(
+            params=self.encoder_embedding,
+            ids=self.seed_song_inputs
+        )
+        self.seed_song_embedded = tf.reshape(
+            self.seed_song_embedded,
+            [self.para.batch_size, 1, self.para.embedding_size, 1]
         )
         self.encoder_inputs_embedded = tf.nn.embedding_lookup(
             params=self.encoder_embedding,
@@ -213,6 +223,9 @@ class SRCNN():
         )
         self.residual_outputs = self.residual(
             inv_conv1_relu, self.encoder_inputs_embedded
+        )
+        self.residual_outputs = self.residual(
+            self.residual_outputs, self.seed_song_embedded
         )
         self.embedding_outputs = tf.reshape(
             self.residual_outputs,
