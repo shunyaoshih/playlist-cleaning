@@ -74,72 +74,6 @@ class SRCNN():
                 shape=(None,)
             )
 
-    def build_weights(self):
-        self.weights = {
-            'w1': tf.Variable(
-                tf.random_normal([9, 9, 1, 64], stddev=1e-3),
-                dtype=self.dtype,
-                name='w1'
-            ),
-            'w2': tf.Variable(
-                tf.random_normal([1, 1, 64, 32], stddev=1e-3),
-                dtype=self.dtype,
-                name='w1'
-            ),
-            'w3': tf.Variable(
-                tf.random_normal([5, 5, 32, 1], stddev=1e-3),
-                dtype=self.dtype,
-                name='w1'
-            ),
-            'inv_w3': tf.Variable(
-                tf.random_normal([5, 5, 32, 1], stddev=1e-3),
-                dtype=self.dtype,
-                name='inv_w3'
-            ),
-            'inv_w2': tf.Variable(
-                tf.random_normal([1, 1, 64, 32], stddev=1e-3),
-                dtype=self.dtype,
-                name='inv_w2'
-            ),
-            'inv_w1': tf.Variable(
-                tf.random_normal([9, 9, 1, 64], stddev=1e-3),
-                dtype=self.dtype,
-                name='inv_w1'
-            ),
-        }
-        self.biases = {
-            'b1': tf.Variable(
-                tf.zeros([64]),
-                dtype=self.dtype,
-                name='b1'
-            ),
-            'b2': tf.Variable(
-                tf.zeros([32]),
-                dtype=self.dtype,
-                name='b2'
-            ),
-            'b3': tf.Variable(
-                tf.zeros([1]),
-                dtype=self.dtype,
-                name='b3'
-            ),
-            'inv_b3': tf.Variable(
-                tf.zeros([32]),
-                dtype=self.dtype,
-                name='inv_b3'
-            ),
-            'inv_b2': tf.Variable(
-                tf.zeros([64]),
-                dtype=self.dtype,
-                name='b2'
-            ),
-            'inv_b1': tf.Variable(
-                tf.zeros([1]),
-                dtype=self.dtype,
-                name='inv_b1'
-            ),
-        }
-
     def build_graph(self):
         self.encoder_embedding = tf.get_variable(
             name='encoder_embedding',
@@ -165,7 +99,12 @@ class SRCNN():
             padding='VALID'
         )
         if self.para.batch_norm == 1:
-            conv1 = self.batch_normalization(conv1, 'conv1')
+            conv1 = self.batch_normalization(
+                conv1,
+                self.offsets['o1'],
+                self.scales['s1'],
+                'conv1'
+            )
         print(conv1.get_shape())
         conv1_relu = tf.nn.relu(conv1 + self.biases['b1'])
         conv1_relu = tf.nn.dropout(
@@ -179,7 +118,12 @@ class SRCNN():
             padding='VALID'
         )
         if self.para.batch_norm == 1:
-            conv2 = self.batch_normalization(conv2, 'conv2')
+            conv2 = self.batch_normalization(
+                conv2,
+                self.offsets['o2'],
+                self.scales['s2'],
+                'conv2'
+            )
         print(conv2.get_shape())
         conv2_relu = tf.nn.relu(conv2 + self.biases['b2'])
         conv2_relu = tf.nn.dropout(
@@ -193,7 +137,12 @@ class SRCNN():
             padding='VALID'
         )
         if self.para.batch_norm == 1:
-            conv3 = self.batch_normalization(conv3, 'conv3')
+            conv3 = self.batch_normalization(
+                conv3,
+                self.offsets['o3'],
+                self.scales['s3'],
+                'conv3'
+            )
         print(conv3.get_shape())
         conv3_relu = tf.nn.relu(conv3 + self.biases['b3'])
         conv3_relu = tf.nn.dropout(
@@ -208,7 +157,12 @@ class SRCNN():
             padding='VALID'
         )
         if self.para.batch_norm == 1:
-            inv_conv3 = self.batch_normalization(inv_conv3, 'inv_conv3')
+            inv_conv3 = self.batch_normalization(
+                inv_conv3,
+                self.offsets['inv_o3'],
+                self.scales['inv_s3'],
+                'inv_conv3'
+            )
         print(inv_conv3.get_shape())
         inv_conv3_relu = tf.nn.relu(inv_conv3 + self.biases['inv_b3'])
         inv_conv3_relu = tf.nn.dropout(
@@ -223,7 +177,12 @@ class SRCNN():
             padding='VALID'
         )
         if self.para.batch_norm == 1:
-            inv_conv2 = self.batch_normalization(inv_conv2, 'inv_conv2')
+            inv_conv2 = self.batch_normalization(
+                inv_conv2,
+                self.offsets['inv_o2'],
+                self.scales['inv_s2'],
+                'inv_conv2'
+            )
         print(inv_conv2.get_shape())
         inv_conv2_relu = tf.nn.relu(inv_conv2 + self.biases['inv_b2'])
         inv_conv2_relu = tf.nn.dropout(
@@ -238,7 +197,12 @@ class SRCNN():
             padding='VALID'
         )
         if self.para.batch_norm == 1:
-            inv_conv1 = self.batch_normalization(inv_conv1, 'inv_conv1')
+            inv_conv1 = self.batch_normalization(
+                inv_conv1,
+                self.offsets['inv_o1'],
+                self.scales['inv_s1'],
+                'inv_conv1'
+            )
         print(inv_conv1.get_shape())
         inv_conv1_relu = tf.nn.relu(inv_conv1 + self.biases['inv_b1'])
         inv_conv1_relu = tf.nn.dropout(
@@ -305,15 +269,18 @@ class SRCNN():
                tf.to_float(self.para.batch_size)
         return loss
 
-    def batch_normalization(self, input_tensor, name):
+    def batch_normalization(self, input_tensor, offset, scale, name):
         """ global normalization """
+
         mean, variance = tf.nn.moments(input_tensor, [0, 1, 2])
+        # print(mean.get_shape())
+        # print(variance.get_shape())
         input_tensor_norm = tf.nn.batch_normalization(
             x=input_tensor,
             mean=mean,
             variance=variance,
-            offset=None,
-            scale=None,
+            offset=offset,
+            scale=scale,
             variance_epsilon=1e-8,
             name=name
         )
@@ -364,3 +331,133 @@ class SRCNN():
         return feature['encoder_input'], feature['encoder_input_len'], \
                feature['decoder_input'], feature['decoder_input_len'], \
                feature['seed_ids']
+
+    def build_weights(self):
+        self.weights = {
+            'w1': tf.Variable(
+                tf.random_normal([9, 9, 1, 64], stddev=1e-3),
+                dtype=self.dtype,
+                name='w1'
+            ),
+            'w2': tf.Variable(
+                tf.random_normal([1, 1, 64, 32], stddev=1e-3),
+                dtype=self.dtype,
+                name='w1'
+            ),
+            'w3': tf.Variable(
+                tf.random_normal([5, 5, 32, 1], stddev=1e-3),
+                dtype=self.dtype,
+                name='w1'
+            ),
+            'inv_w3': tf.Variable(
+                tf.random_normal([5, 5, 32, 1], stddev=1e-3),
+                dtype=self.dtype,
+                name='inv_w3'
+            ),
+            'inv_w2': tf.Variable(
+                tf.random_normal([1, 1, 64, 32], stddev=1e-3),
+                dtype=self.dtype,
+                name='inv_w2'
+            ),
+            'inv_w1': tf.Variable(
+                tf.random_normal([9, 9, 1, 64], stddev=1e-3),
+                dtype=self.dtype,
+                name='inv_w1'
+            ),
+        }
+        self.biases = {
+            'b1': tf.Variable(
+                tf.zeros([64]),
+                dtype=self.dtype,
+                name='b1'
+            ),
+            'b2': tf.Variable(
+                tf.zeros([32]),
+                dtype=self.dtype,
+                name='b2'
+            ),
+            'b3': tf.Variable(
+                tf.zeros([1]),
+                dtype=self.dtype,
+                name='b3'
+            ),
+            'inv_b3': tf.Variable(
+                tf.zeros([32]),
+                dtype=self.dtype,
+                name='inv_b3'
+            ),
+            'inv_b2': tf.Variable(
+                tf.zeros([64]),
+                dtype=self.dtype,
+                name='b2'
+            ),
+            'inv_b1': tf.Variable(
+                tf.zeros([1]),
+                dtype=self.dtype,
+                name='inv_b1'
+            ),
+        }
+        self.offsets = {
+            'o1': tf.get_variable(
+                name='o1',
+                shape=[64],
+                dtype=self.dtype
+            ),
+            'o2': tf.get_variable(
+                name='o2',
+                shape=[32],
+                dtype=self.dtype
+            ),
+            'o3': tf.get_variable(
+                name='o3',
+                shape=[1],
+                dtype=self.dtype
+            ),
+            'inv_o3': tf.get_variable(
+                name='inv_o3',
+                shape=[32],
+                dtype=self.dtype
+            ),
+            'inv_o2': tf.get_variable(
+                name='inv_o2',
+                shape=[64],
+                dtype=self.dtype
+            ),
+            'inv_o1': tf.get_variable(
+                name='inv_o1',
+                shape=[1],
+                dtype=self.dtype
+            ),
+        }
+        self.scales = {
+            's1': tf.get_variable(
+                name='s1',
+                shape=[64],
+                dtype=self.dtype
+            ),
+            's2': tf.get_variable(
+                name='s2',
+                shape=[32],
+                dtype=self.dtype
+            ),
+            's3': tf.get_variable(
+                name='s3',
+                shape=[1],
+                dtype=self.dtype
+            ),
+            'inv_s3': tf.get_variable(
+                name='inv_s3',
+                shape=[32],
+                dtype=self.dtype
+            ),
+            'inv_s2': tf.get_variable(
+                name='inv_s2',
+                shape=[64],
+                dtype=self.dtype
+            ),
+            'inv_s1': tf.get_variable(
+                name='inv_s1',
+                shape=[1],
+                dtype=self.dtype
+            ),
+        }
