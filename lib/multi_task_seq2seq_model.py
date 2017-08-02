@@ -130,7 +130,7 @@ class Multi_Task_Seq2Seq():
 
     def build_concat_layer(self):
         # self.seed_song_projected_tiled: [batch_size * max_len, embedding_size]
-        self.seed_song_projected_tiled = seq1seq.tile_batch(
+        self.seed_song_projected_tiled = seq2seq.tile_batch(
             self.seed_song_embedded,
             multiplier=self.para.max_len
         )
