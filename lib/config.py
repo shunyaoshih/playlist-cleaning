@@ -47,6 +47,7 @@ def params_setup():
         para.max_len += 1
     if para.nn == 'cnn':
         para.start_decay_step = 5000
+        para.decay_steps = 5000
 
     if para.debug == 1:
         para.num_units = 2
