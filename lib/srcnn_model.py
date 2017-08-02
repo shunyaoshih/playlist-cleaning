@@ -261,7 +261,18 @@ class SRCNN():
 
 
     def build_optimizer(self):
-        self.opt = tf.train.AdamOptimizer()
+        self.learning_rate = tf.cond(
+           self.global_step < self.para.start_decay_step,
+           lambda: tf.constant(self.para.learning_rate),
+           lambda: tf.train.exponential_decay(
+               self.para.learning_rate,
+               (self.global_step - self.para.start_decay_step),
+               self.para.decay_steps,
+               self.para.decay_factor,
+               staircase=True),
+           name="learning_rate"
+        )
+        self.opt = tf.train.GradientDescentOptimizer(self.learning_rate)
         self.update = self.opt.minimize(self.loss)
 
     def compute_loss(self, logits, labels):
