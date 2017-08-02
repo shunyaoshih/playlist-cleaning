@@ -36,6 +36,7 @@ def params_setup():
     parser.add_argument('--model_dir', type=str, default='models', help='')
 
     # parameters for cnn
+    parser.add_argument('--batch_norm', type=int, default=1, help='')
 
     para = parser.parse_args()
 
