@@ -98,15 +98,15 @@ class SRCNN():
             strides=[1, 1, 1, 1],
             padding='VALID'
         )
+        print(conv1.get_shape())
         if self.para.batch_norm == 1:
-            conv1 = self.batch_normalization(
+            conv1_bn = self.batch_normalization(
                 conv1,
                 self.offsets['o1'],
                 self.scales['s1'],
                 'conv1'
             )
-        print(conv1.get_shape())
-        conv1_relu = tf.nn.relu(conv1 + self.biases['b1'])
+        conv1_relu = tf.nn.relu(conv1_bn + self.biases['b1'])
         conv1_relu = tf.nn.dropout(
             conv1_relu,
             keep_prob=(1.0 - self.para.dropout)
@@ -117,15 +117,15 @@ class SRCNN():
             strides=[1, 1, 1, 1],
             padding='VALID'
         )
+        print(conv2.get_shape())
         if self.para.batch_norm == 1:
-            conv2 = self.batch_normalization(
+            conv2_bn = self.batch_normalization(
                 conv2,
                 self.offsets['o2'],
                 self.scales['s2'],
                 'conv2'
             )
-        print(conv2.get_shape())
-        conv2_relu = tf.nn.relu(conv2 + self.biases['b2'])
+        conv2_relu = tf.nn.relu(conv2_bn + self.biases['b2'])
         conv2_relu = tf.nn.dropout(
             conv2_relu,
             keep_prob=(1.0 - self.para.dropout)
@@ -136,15 +136,15 @@ class SRCNN():
             strides=[1, 1, 1, 1],
             padding='VALID'
         )
+        print(conv3.get_shape())
         if self.para.batch_norm == 1:
-            conv3 = self.batch_normalization(
+            conv3_bn = self.batch_normalization(
                 conv3,
                 self.offsets['o3'],
                 self.scales['s3'],
                 'conv3'
             )
-        print(conv3.get_shape())
-        conv3_relu = tf.nn.relu(conv3 + self.biases['b3'])
+        conv3_relu = tf.nn.relu(conv3_bn + self.biases['b3'])
         conv3_relu = tf.nn.dropout(
             conv3_relu,
             keep_prob=(1.0 - self.para.dropout)
@@ -156,15 +156,16 @@ class SRCNN():
             strides=[1, 1, 1, 1],
             padding='VALID'
         )
+        inv_conv3 = self.residual(inv_conv3, conv2)
+        print(inv_conv3.get_shape())
         if self.para.batch_norm == 1:
-            inv_conv3 = self.batch_normalization(
+            inv_conv3_bn = self.batch_normalization(
                 inv_conv3,
                 self.offsets['inv_o3'],
                 self.scales['inv_s3'],
                 'inv_conv3'
             )
-        print(inv_conv3.get_shape())
-        inv_conv3_relu = tf.nn.relu(inv_conv3 + self.biases['inv_b3'])
+        inv_conv3_relu = tf.nn.relu(inv_conv3_bn + self.biases['inv_b3'])
         inv_conv3_relu = tf.nn.dropout(
             inv_conv3_relu,
             keep_prob=(1.0 - self.para.dropout)
@@ -176,15 +177,16 @@ class SRCNN():
             strides=[1, 1, 1, 1],
             padding='VALID'
         )
+        inv_conv2 = self.residual(inv_conv2, conv1)
+        print(inv_conv2.get_shape())
         if self.para.batch_norm == 1:
-            inv_conv2 = self.batch_normalization(
+            inv_conv2_bn = self.batch_normalization(
                 inv_conv2,
                 self.offsets['inv_o2'],
                 self.scales['inv_s2'],
                 'inv_conv2'
             )
-        print(inv_conv2.get_shape())
-        inv_conv2_relu = tf.nn.relu(inv_conv2 + self.biases['inv_b2'])
+        inv_conv2_relu = tf.nn.relu(inv_conv2_bn + self.biases['inv_b2'])
         inv_conv2_relu = tf.nn.dropout(
             inv_conv2_relu,
             keep_prob=(1.0 - self.para.dropout)
@@ -196,20 +198,20 @@ class SRCNN():
             strides=[1, 1, 1, 1],
             padding='VALID'
         )
+        print(inv_conv1.get_shape())
         if self.para.batch_norm == 1:
-            inv_conv1 = self.batch_normalization(
+            inv_conv1_bn = self.batch_normalization(
                 inv_conv1,
                 self.offsets['inv_o1'],
                 self.scales['inv_s1'],
                 'inv_conv1'
             )
-        print(inv_conv1.get_shape())
-        inv_conv1_relu = tf.nn.relu(inv_conv1 + self.biases['inv_b1'])
+        inv_conv1_relu = tf.nn.relu(inv_conv1_bn + self.biases['inv_b1'])
         inv_conv1_relu = tf.nn.dropout(
             inv_conv1_relu,
             keep_prob=(1.0 - self.para.dropout)
         )
-        self.residual_outputs = tf.add(
+        self.residual_outputs = self.residual(
             inv_conv1_relu, self.encoder_inputs_embedded
         )
         self.embedding_outputs = tf.reshape(
@@ -234,6 +236,9 @@ class SRCNN():
                 ids,
                 [self.para.batch_size, self.para.max_len, 1]
             )
+
+    def residual(self, x, y):
+        return tf.add(x, y)
 
     def build_optimizer(self):
         self.learning_rate = tf.cond(
