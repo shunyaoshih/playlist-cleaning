@@ -208,6 +208,12 @@ class SRCNN():
             strides=[1, 1, 1, 1],
             padding='VALID'
         )
+        self.residual_outputs = self.residual(
+            inv_conv1, self.encoder_inputs_embedded
+        )
+        self.residual_outputs = self.residual(
+            self.residual_outputs, self.seed_song_embedded
+        )
         print(inv_conv1.get_shape())
         if self.para.batch_norm == 1:
             inv_conv1_bn = self.batch_normalization(
@@ -220,12 +226,6 @@ class SRCNN():
         inv_conv1_relu = tf.nn.dropout(
             inv_conv1_relu,
             keep_prob=(1.0 - self.para.dropout)
-        )
-        self.residual_outputs = self.residual(
-            inv_conv1_relu, self.encoder_inputs_embedded
-        )
-        self.residual_outputs = self.residual(
-            self.residual_outputs, self.seed_song_embedded
         )
         self.embedding_outputs = tf.reshape(
             self.residual_outputs,
