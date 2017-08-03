@@ -1,4 +1,4 @@
-total_num = 50000
+total_num = 70000
 
 _START_VOCAB = ['_PAD', '_BOS', '_EOS', '_UNK']
 
@@ -54,6 +54,8 @@ for i, seq in enumerate(rerank_file):
 x_file = open('./raw_data.txt', 'w')
 y_file = open('./rerank_data.txt', 'w')
 
+counter = 0
+total_num = len(open('./x.txt', 'r').read().splitlines())
 for k, v in raw_dct.items():
     if k in rerank_dct and k in raw_dct:
         i = raw_dct[k]
@@ -64,6 +66,7 @@ for k, v in raw_dct.items():
         x_file.write(' '.join(raw_file[i][2:]) + '\n')
         y_file.write(k + ' ')
         y_file.write(' '.join(rerank_file[j][2:]) + '\n')
-
+        counter += 1
 x_file.close()
 y_file.close()
+print('percentage of data we using: {}%'.format(counter / total_num * 100))

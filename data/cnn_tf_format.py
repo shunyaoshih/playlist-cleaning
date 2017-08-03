@@ -4,15 +4,17 @@ import os
 import tensorflow as tf
 from tqdm import tqdm
 
+max_len = 210
+
 def _int64_feature(value):
   return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 def _list_feature(lst):
     return tf.train.Feature(int64_list=tf.train.Int64List(value=lst))
 
-def convert_to_tf_format():
-    encoder_file = open('./ids_raw_data.txt', 'r').read().splitlines()
-    decoder_file = open('./ids_rerank_data.txt', 'r').read().splitlines()
-    seed_file = open('./ids_seed.txt', 'r').read().splitlines()
+def convert_to_tf_format(mode):
+    encoder_file = open('./{}_ids_raw_data.txt'.format(mode), 'r').read().splitlines()
+    decoder_file = open('./{}_ids_rerank_data.txt'.format(mode), 'r').read().splitlines()
+    seed_file = open('./{}_ids_seed.txt'.format(mode), 'r').read().splitlines()
 
     encoder_seqs = []
     encoder_seqs_len = []
@@ -36,12 +38,14 @@ def convert_to_tf_format():
         seed_ids.append(int(seed_file[i]))
 
     mx = max([max(encoder_seqs_len), max(decoder_seqs_len)])
+    print('{}\'s max_len: {}'.format(mode, mx))
+    mx = max_len
     encoder_seqs = [seq + [0] * (mx - len(seq)) for seq in encoder_seqs]
     decoder_seqs = [seq + [0] * (mx - len(seq)) for seq in decoder_seqs]
     print('num of data: %d' % (len(encoder_seqs)))
     print('max len: %d' % (len(decoder_seqs[0])))
 
-    writer = tf.python_io.TFRecordWriter('cnn_train.tfrecords')
+    writer = tf.python_io.TFRecordWriter('{}_cnn_train.tfrecords'.format(mode))
     for i in tqdm(range(len(encoder_seqs))):
         example = tf.train.Example(features=tf.train.Features(feature={
             'encoder_input': _list_feature(encoder_seqs[i]),
@@ -55,4 +59,6 @@ def convert_to_tf_format():
 
 if __name__ == "__main__":
     # if not os.path.exists('./cnn_train.tfrecords'):
-    convert_to_tf_format()
+    print('max_len should be less or equal to {}'.format(max_len))
+    convert_to_tf_format('train')
+    convert_to_tf_format('valid')

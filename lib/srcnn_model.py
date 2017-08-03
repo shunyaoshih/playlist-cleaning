@@ -42,7 +42,7 @@ class SRCNN():
         if self.para.mode == 'train':
             self.raw_encoder_inputs, self.raw_encoder_inputs_len, \
             self.raw_decoder_inputs, self.raw_decoder_inputs_len, \
-            self.raw_seed_song_inputs = self.read_batch_sequences()
+            self.raw_seed_song_inputs = self.read_batch_sequences('train')
 
             # self.encoder_inputs: [batch_size, max_len]
             self.encoder_inputs = self.raw_encoder_inputs
@@ -293,10 +293,12 @@ class SRCNN():
         )
         return input_tensor_norm
 
-    def read_batch_sequences(self):
+    def read_batch_sequences(self, mode):
         """ read a batch from .tfrecords """
 
-        file_queue = tf.train.string_input_producer(['./data/cnn_train.tfrecords'])
+        file_queue = tf.train.string_input_producer(
+            ['./data/{}_cnn_train.tfrecords'.format(mode)]
+        )
 
         ei, ei_len, di, di_len, sid = self.read_one_sequence(file_queue)
 
