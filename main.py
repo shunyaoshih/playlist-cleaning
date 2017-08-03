@@ -63,7 +63,15 @@ if __name__ == "__main__":
                             (step, perplexity, step_time / para.steps_per_stats))
                         step_time = 0
                     step += 1
-
+            elif para.mode =='valid':
+                for i in range(10):
+                    [loss, predict_count] = sess.run([
+                        model.loss,
+                        model.predict_count,
+                    ])
+                    loss = loss * para.batch_size
+                    perplexity = np.exp(loss / predict_count)
+                    print('perplexity: %.2f' % perplexity)
             elif para.mode == 'test':
                 encoder_inputs, encoder_inputs_len, seed_song_inputs = \
                     read_testing_sequences(para)

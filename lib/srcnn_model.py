@@ -27,6 +27,12 @@ class SRCNN():
             self.build_optimizer()
 
         tf.get_variable_scope().reuse_variables()
+        self.para.mode = 'valid'
+        with tf.name_scope('valid'):
+            print('build validation graph')
+            self.set_input()
+            self.build_graph()
+
         self.para.mode = 'test'
         self.para.batch_size = read_num_of_lines('results/in.txt')
         with tf.name_scope('test'):
@@ -39,10 +45,10 @@ class SRCNN():
 
     def set_input(self):
         print('set input nodes...')
-        if self.para.mode == 'train':
+        if self.para.mode == 'train' or self.para.mode == 'valid':
             self.raw_encoder_inputs, self.raw_encoder_inputs_len, \
             self.raw_decoder_inputs, self.raw_decoder_inputs_len, \
-            self.raw_seed_song_inputs = self.read_batch_sequences('train')
+            self.raw_seed_song_inputs = self.read_batch_sequences(self.para.mode)
 
             # self.encoder_inputs: [batch_size, max_len]
             self.encoder_inputs = self.raw_encoder_inputs
