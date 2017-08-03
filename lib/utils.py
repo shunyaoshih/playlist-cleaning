@@ -98,8 +98,6 @@ def word_id_to_song_id(para, predicted_ids):
                 now.append(song_id)
             tmp.append(now)
             now = []
-    for seq in tmp:
-        print(len(seq))
     song_id_seqs = tmp
     song_id_seqs = [
         [dic[song_id] for song_id in seq if check_valid_song_id(song_id)]
