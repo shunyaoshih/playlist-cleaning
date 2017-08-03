@@ -26,8 +26,8 @@ def convert_to_tf_format():
         #    continue
         # if len(decoder_seq_ids) == 0 or len(decoder_seq_ids) > 200:
         #    continue
-        encoder_seq_ids = [int(id) for id in encoder_seq_ids if len(id) > 0]
-        decoder_seq_ids = [int(id) for id in decoder_seq_ids if len(id) > 0]
+        encoder_seq_ids = [int(id) for id in encoder_seq_ids if len(id) > 0] + [2]
+        decoder_seq_ids = [int(id) for id in decoder_seq_ids if len(id) > 0] + [2]
 
         encoder_seqs.append(encoder_seq_ids)
         encoder_seqs_len.append(len(encoder_seq_ids))
