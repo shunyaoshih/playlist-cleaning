@@ -8,7 +8,7 @@ def params_setup():
     """ arguments definition """
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--nn', type=str, default='rnn', help='')
+    parser.add_argument('--nn', type=str, default='cnn', help='')
     parser.add_argument('--mode', type=str, default='train', help='')
 
     # parameters for multi-task seq2seq
