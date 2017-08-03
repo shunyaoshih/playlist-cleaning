@@ -71,6 +71,11 @@ def check_valid_song_id(song_id):
     filter_list = [ 0, 1, 2, 3, -1]
     return not song_id in filter_list
 
+def remove_duplicates(seq):
+    seen = set()
+    seen_add = seen.add
+    return [x for x in seq if not(x in seen or seen_add(x))]
+
 def word_id_to_song_id(para, predicted_ids):
     dic = open(dictionary_path, 'r').read().splitlines()
     # predicted_ids: [batch_size, <= max_len, beam_width]
@@ -102,5 +107,6 @@ def word_id_to_song_id(para, predicted_ids):
     ]
 
     # song_id_seqs = [list(set(seq)) for seq in song_id_seqs]
+    song_id_seqs = [remove_duplicates(seq) for seq in song_id_seqs]
 
     return '\n'.join([' '.join(seq) for seq in song_id_seqs])
