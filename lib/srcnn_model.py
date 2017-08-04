@@ -280,6 +280,8 @@ class SRCNN():
             )
         elif self.para.mode == 'rl':
             self.sampled_ids = self.get_sampled_ids(self.outputs)
+            self.decoder_predicted_ids = self.get_predicted_ids(self.outputs)
+
             self.rl_loss = self.compute_rl_loss(
                logits=self.outputs,
                labels=self.sampled_ids_inputs
@@ -368,11 +370,8 @@ class SRCNN():
             outputs,
             [self.para.batch_size * self.para.max_len, self.para.decoder_vocab_size]
         )
-        sampled_ids = tf.multinomial(outputs, num_samples=1)
-        sampled_ids = tf.reshape(
-            sampled_ids,
-            [self.para.batch_size, self.para.max_len]
-        )
+        ids = tf.multinomial(tf.log(tf.nn.softmax(outputs)), num_samples=1)
+        sampled_ids = tf.reshape(ids, [self.para.batch_size, self.para.max_len])
         return sampled_ids
 
     def read_batch_sequences(self, mode):

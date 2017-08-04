@@ -81,6 +81,19 @@ if __name__ == "__main__":
                     ])
                     data = [e.astype(np.int32) for e in data]
 
+                    print('get sampled ids')
+                    [x] = sess.run(
+                        fetches=[
+                            model.decoder_predicted_ids,
+                        ],
+                        feed_dict={
+                            model.encoder_inputs: data[0],
+                            model.encoder_inputs_len: data[1],
+                            model.seed_song_inputs: data[2]
+                        }
+                    )
+                    print(x)
+
                     # get sampled ids
                     print('get sampled ids')
                     [sampled_ids] = sess.run(
