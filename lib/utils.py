@@ -6,7 +6,8 @@ from collections import defaultdict
 __all__ = ['word_id_to_song_id',
            'read_testing_sequences',
            'read_num_of_lines',
-           'get_max_len']
+           'get_max_len',
+           'reward_functions']
 
 dictionary_path = 'data/vocab_default.txt'
 
@@ -108,3 +109,8 @@ def word_id_to_song_id(para, predicted_ids):
     song_id_seqs = [remove_duplicates(seq) for seq in song_id_seqs]
 
     return '\n'.join([' '.join(seq) for seq in song_id_seqs])
+
+def reward_functions(para, sampled_ids):
+    # TODO
+    rewards = [0.0] * para.batch_size
+    return np.asarray(rewards)

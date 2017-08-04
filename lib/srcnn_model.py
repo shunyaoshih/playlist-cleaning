@@ -19,14 +19,21 @@ class SRCNN():
         original_batch_size = deepcopy(self.para.batch_size)
 
         self.build_weights()
+        self.para.mode = 'train'
         with tf.name_scope('train'):
             print('build training graph')
-            self.para.mode = 'train'
             self.set_input()
             self.build_graph()
             self.build_optimizer()
 
         tf.get_variable_scope().reuse_variables()
+        self.para.mode = 'rl'
+        with tf.name_scope('rl'):
+            print('build reinforcement learning graph')
+            self.set_input()
+            self.build_graph()
+            self.build_rl_optimizer()
+
         self.para.mode = 'valid'
         with tf.name_scope('valid'):
             print('build validation graph')
@@ -64,21 +71,44 @@ class SRCNN():
             self.decoder_targets = self.raw_decoder_inputs
 
             self.predict_count = tf.reduce_sum(self.decoder_inputs_len)
-        elif self.para.mode == 'test':
+
+        elif self.para.mode == 'rl':
+            self.raw_encoder_inputs, self.raw_encoder_inputs_len, _, _, \
+            self.raw_seed_song_inputs = self.read_batch_sequences('train')
+
             # self.encoder_inputs: [batch_size, max_len]
             self.encoder_inputs = tf.placeholder(
-                dtype=tf.int32,
-                shape=(None, self.para.max_len),
+                dtype=tf.int32, shape=(None, self.para.max_len),
             )
             # encoder_inputs_length: [batch_size]
             self.encoder_inputs_len = tf.placeholder(
-                dtype=tf.int32,
-                shape=(None,)
+                dtype=tf.int32, shape=(None,)
             )
             # self.seed_song_inputs: [batch_size]
             self.seed_song_inputs = tf.placeholder(
-                dtype=tf.int64,
-                shape=(None,)
+                dtype=tf.int32, shape=(None,)
+            )
+            # self.sampled_ids_inputs: [batch_size, max_len]
+            self.sampled_ids_inputs = tf.placeholder(
+                dtype=tf.int32, shape=(None, self.para.max_len)
+            )
+            # self.reward: [batch_size]
+            self.rewards = tf.placeholder(
+                dtype=self.dtype, shape=(None,)
+            )
+
+        elif self.para.mode == 'test':
+            # self.encoder_inputs: [batch_size, max_len]
+            self.encoder_inputs = tf.placeholder(
+                dtype=tf.int32, shape=(None, self.para.max_len),
+            )
+            # encoder_inputs_length: [batch_size]
+            self.encoder_inputs_len = tf.placeholder(
+                dtype=tf.int32, shape=(None,)
+            )
+            # self.seed_song_inputs: [batch_size]
+            self.seed_song_inputs = tf.placeholder(
+                dtype=tf.int32, shape=(None,)
             )
 
     def build_graph(self):
@@ -242,26 +272,42 @@ class SRCNN():
             units=self.para.decoder_vocab_size,
             name='output_projection'
         )
-        if self.para.mode == 'train':
+
+        if self.para.mode == 'train' or self.para.mode == 'valid':
             self.loss = self.compute_loss(
                 logits=self.outputs,
                 labels=self.decoder_targets
             )
-        else:
+        elif self.para.mode == 'rl':
+            self.sampled_ids = self.get_sampled_ids(self.outputs)
+            self.rl_loss = self.compute_rl_loss(
+               logits=self.outputs,
+               labels=self.sampled_ids_inputs
+            )
+        elif self.para.mode == 'test':
             # compatible with the rnn model
             self.decoder_outputs = self.outputs
-            ids = tf.argmax(self.decoder_outputs, axis=2)
-            self.decoder_predicted_ids = tf.reshape(
-                ids,
-                [self.para.batch_size, self.para.max_len, 1]
-            )
+            self.decoder_predicted_ids = self.get_predicted_ids(self.outputs)
 
     def residual(self, x, y):
         return tf.add(x, y)
 
-    def build_optimizer(self):
-        self.opt = tf.train.AdamOptimizer()
-        self.update = self.opt.minimize(self.loss)
+    def batch_normalization(self, input_tensor, offset, scale, name):
+        """ global normalization """
+
+        mean, variance = tf.nn.moments(input_tensor, [0, 1, 2])
+        # print(mean.get_shape())
+        # print(variance.get_shape())
+        input_tensor_norm = tf.nn.batch_normalization(
+            x=input_tensor,
+            mean=mean,
+            variance=variance,
+            offset=offset,
+            scale=scale,
+            variance_epsilon=1e-8,
+            name=name
+        )
+        return input_tensor_norm
 
     def compute_loss(self, logits, labels):
         """
@@ -282,22 +328,52 @@ class SRCNN():
                tf.to_float(self.para.batch_size)
         return loss
 
-    def batch_normalization(self, input_tensor, offset, scale, name):
-        """ global normalization """
-
-        mean, variance = tf.nn.moments(input_tensor, [0, 1, 2])
-        # print(mean.get_shape())
-        # print(variance.get_shape())
-        input_tensor_norm = tf.nn.batch_normalization(
-            x=input_tensor,
-            mean=mean,
-            variance=variance,
-            offset=offset,
-            scale=scale,
-            variance_epsilon=1e-8,
-            name=name
+    def compute_rl_loss(self, logits, labels):
+        """
+            logits: [batch_size, max_len, decoder_vocab_size]
+            labels: [batch_size, max_len]
+        """
+        # log_p: [batch_size, max_len, decoder_vocab_size]
+        log_p = -tf.log(tf.nn.softmax(logits))
+        # labels: [batch_size, max_len, decoder_vocab_size]
+        labels = tf.one_hot(
+            indices=labels,
+            depth=self.para.decoder_vocab_size
         )
-        return input_tensor_norm
+        # loss: [batch_size]
+        loss = tf.reduce_sum(tf.multiply(log_p, labels), [1, 2])
+        loss = tf.reduce_sum(tf.multiply(loss, self.rewards)) / \
+               tf.to_float(self.para.batch_size)
+        return loss
+
+    def build_optimizer(self):
+        self.opt = tf.train.AdamOptimizer()
+        self.update = self.opt.minimize(self.loss)
+
+    def build_rl_optimizer(self):
+        self.rl_opt = tf.train.AdamOptimizer()
+        self.rl_update = self.opt.minimize(self.rl_loss)
+
+    def get_predicted_ids(self, outputs):
+        ids = tf.argmax(outputs, axis=2)
+        decoder_predicted_ids = tf.reshape(
+            ids,
+            [self.para.batch_size, self.para.max_len, 1]
+        )
+        return decoder_predicted_ids
+
+    def get_sampled_ids(self, outputs):
+        # outputs: [batch_size, max_len, decoder_vocab_size]
+        outputs = tf.reshape(
+            outputs,
+            [self.para.batch_size * self.para.max_len, self.para.decoder_vocab_size]
+        )
+        sampled_ids = tf.multinomial(outputs, num_samples=1)
+        sampled_ids = tf.reshape(
+            sampled_ids,
+            [self.para.batch_size, self.para.max_len]
+        )
+        return sampled_ids
 
     def read_batch_sequences(self, mode):
         """ read a batch from .tfrecords """
@@ -325,6 +401,7 @@ class SRCNN():
                                         [self.para.batch_size])
         decoder_inputs_len = tf.reshape(decoder_inputs_len,
                                         [self.para.batch_size])
+        seed_ids = tf.reshape(seed_ids, [self.para.batch_size])
         return encoder_inputs, tf.to_int32(encoder_inputs_len), \
                decoder_inputs, tf.to_int32(decoder_inputs_len), seed_ids
 

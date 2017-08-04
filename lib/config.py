@@ -57,7 +57,7 @@ def params_setup():
         para.num_layers = 2
         para.batch_size = 2
         para.embedding_size = 2
-    if para.mode == 'test':
+    if para.mode == 'rl' or para.mode == 'test':
         para.dropout = 0.0
     para.model_dir = './' + para.nn + '_' + para.model_dir
 
