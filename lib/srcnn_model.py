@@ -20,28 +20,26 @@ class SRCNN():
 
         self.build_weights()
         if self.para.mode == 'train':
-            self.para.mode = 'train'
             with tf.name_scope('train'):
                 print('build training graph')
                 self.set_input()
                 self.build_graph()
                 self.build_optimizer()
 
-        # tf.get_variable_scope().reuse_variables()
         if self.para.mode == 'rl':
-            self.para.mode = 'rl'
             with tf.name_scope('rl'):
                 print('build reinforcement learning graph')
                 self.set_input()
                 self.build_graph()
                 self.build_rl_optimizer()
 
+        # tf.get_variable_scope().reuse_variables()
         if self.para.mode == 'valid':
             self.para.mode = 'valid'
             with tf.name_scope('valid'):
-                print('build validation graph')
-                self.set_input()
-                self.build_graph()
+            print('build validation graph')
+            self.set_input()
+            self.build_graph()
 
         if self.para.mode == 'test':
             self.para.mode = 'test'
@@ -56,10 +54,10 @@ class SRCNN():
 
     def set_input(self):
         print('set input nodes...')
-        if self.para.mode == 'train' or self.para.mode == 'valid':
+        if self.para.mode == 'train':
             self.raw_encoder_inputs, self.raw_encoder_inputs_len, \
             self.raw_decoder_inputs, self.raw_decoder_inputs_len, \
-            self.raw_seed_song_inputs = self.read_batch_sequences(self.para.mode)
+            self.raw_seed_song_inputs = self.read_batch_sequences('train')
 
             # self.encoder_inputs: [batch_size, max_len]
             self.encoder_inputs = self.raw_encoder_inputs
@@ -83,36 +81,44 @@ class SRCNN():
             # self.encoder_inputs: [batch_size, max_len]
             self.encoder_inputs = tf.placeholder(
                 dtype=tf.int32, shape=(None, self.para.max_len),
+                name='encoder_inputs'
             )
             # encoder_inputs_length: [batch_size]
             self.encoder_inputs_len = tf.placeholder(
-                dtype=tf.int32, shape=(None,)
+                dtype=tf.int32, shape=(None,),
+                name='encoder_inputs_len'
             )
             # self.seed_song_inputs: [batch_size]
             self.seed_song_inputs = tf.placeholder(
-                dtype=tf.int32, shape=(None,)
+                dtype=tf.int32, shape=(None,),
+                name='seed_song_inputs'
             )
             # self.sampled_ids_inputs: [batch_size, max_len]
             self.sampled_ids_inputs = tf.placeholder(
-                dtype=tf.int32, shape=(None, self.para.max_len)
+                dtype=tf.int32, shape=(None, self.para.max_len),
+                name='sampled_ids_inputs'
             )
             # self.reward: [batch_size]
             self.rewards = tf.placeholder(
-                dtype=self.dtype, shape=(None,)
+                dtype=self.dtype, shape=(None,),
+                name='rewards'
             )
 
         elif self.para.mode == 'test':
             # self.encoder_inputs: [batch_size, max_len]
             self.encoder_inputs = tf.placeholder(
                 dtype=tf.int32, shape=(None, self.para.max_len),
+                name='encoder_inputs'
             )
             # encoder_inputs_length: [batch_size]
             self.encoder_inputs_len = tf.placeholder(
-                dtype=tf.int32, shape=(None,)
+                dtype=tf.int32, shape=(None,),
+                name='encoder_inputs_len'
             )
             # self.seed_song_inputs: [batch_size]
             self.seed_song_inputs = tf.placeholder(
-                dtype=tf.int32, shape=(None,)
+                dtype=tf.int32, shape=(None,),
+                name='seed_song_inputs'
             )
 
     def build_graph(self):
@@ -277,7 +283,7 @@ class SRCNN():
             name='output_projection'
         )
 
-        if self.para.mode == 'train' or self.para.mode == 'valid':
+        if self.para.mode == 'train':
             self.loss = self.compute_loss(
                 logits=self.outputs,
                 labels=self.decoder_targets
