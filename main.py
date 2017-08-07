@@ -19,8 +19,18 @@ def config_setup():
     config.allow_soft_placement = True
     return config
 
+def load_pretrain(sess):
+    # only when these is no model under model_dir, this funciont will be called
+    pre_train_dir = para.model_dir[:len(para.model_dir) - 3]
+    print('Loading model from %s' % pre_train_dir)
+    ckpt = tf.train.get_checkpoint_state(pre_train_dir)
+    pre_train_saver.restore(sess, ckpt.model_checkpoint_path)
+
 if __name__ == "__main__":
     para = params_setup()
+
+    if para.nn == 'rnn' and para.mode == 'rl':
+        raise NameError('there is no support of RL on rnn')
 
     with tf.Graph().as_default():
         initializer = tf.random_uniform_initializer(
@@ -29,20 +39,38 @@ if __name__ == "__main__":
         if para.nn == 'rnn':
             with tf.variable_scope('model', reuse=None, initializer=initializer):
                 model = Multi_Task_Seq2Seq(para)
+                pretrained_variables = tf.get_collection(
+                    tf.GraphKeys.TRAINABLE_VARIABLES,
+                    scope='model'
+                )
         elif para.nn == 'cnn':
             with tf.variable_scope('model', reuse=None, initializer=initializer):
                 model = SRCNN(para)
+                pretrained_variables = tf.get_collection(
+                    tf.GraphKeys.TRAINABLE_VARIABLES,
+                    scope='model'
+                )
+        if para.nn == 'cnn':
+            for var in pretrained_variables:
+                print("\t{}\t{}".format(var.name, var.get_shape()))
+            pre_train_saver = tf.train.Saver(pretrained_variables)
 
         try:
             os.makedirs(para.model_dir)
         except os.error:
             pass
+
         print(para)
-        sv = tf.train.Supervisor(logdir=para.model_dir)
+
+        if para.nn == 'rnn' or para.mode != 'rl':
+            sv = tf.train.Supervisor(logdir=para.model_dir)
+        else:
+            sv = tf.train.Supervisor(logdir=para.model_dir, init_fn=load_pretrain)
         with sv.managed_session(config=config_setup()) as sess:
             para_file = open('%s/para.txt' % (para.model_dir), 'w')
             para_file.write(str(para))
             para_file.close()
+
             if para.mode == 'train':
                 step_time = 0.0
                 for step in range(20000):
@@ -76,7 +104,6 @@ if __name__ == "__main__":
                     start_time = time.time()
 
                     # get input data
-                    print('get input data')
                     data = sess.run([
                         model.raw_encoder_inputs,
                         model.raw_encoder_inputs_len,
@@ -84,21 +111,7 @@ if __name__ == "__main__":
                     ])
                     data = [e.astype(np.int32) for e in data]
 
-                    print('test: get sampled ids')
-                    [x] = sess.run(
-                        fetches=[
-                            model.decoder_predicted_ids,
-                        ],
-                        feed_dict={
-                            model.encoder_inputs: data[0],
-                            model.encoder_inputs_len: data[1],
-                            model.seed_song_inputs: data[2],
-                        }
-                    )
-                    print(x)
-
                     # get sampled ids
-                    print('get sampled ids')
                     [sampled_ids] = sess.run(
                         fetches=[
                             model.sampled_ids,
@@ -109,30 +122,28 @@ if __name__ == "__main__":
                             model.seed_song_inputs: data[2],
                         }
                     )
-                    print('sampled_ids\' shape: {}'.format(sampled_ids.shape))
 
                     # get reward
-                    print('get reward')
                     rewards = reward_functions(para, sampled_ids)
 
                     # feed rewards and update the model
-                    print('update the model')
-                    # _ = sess.run(
-                    #     fetches=[
-                    #         model.rl_update,
-                    #     ],
-                    #     feed_dict={
-                    #         model.encoder_inputs: data[0],
-                    #         model.encoder_inputs_len: data[1],
-                    #         model.seed_song_inputs: data[2],
-                    #         model.sampled_ids_inputs: sampled_ids,
-                    #         model.rewards: rewards
-                    #     }
-                    # )
+                    _ = sess.run(
+                        fetches=[
+                            model.rl_update,
+                        ],
+                        feed_dict={
+                            model.encoder_inputs: data[0],
+                            model.encoder_inputs_len: data[1],
+                            model.seed_song_inputs: data[2],
+                            model.sampled_ids_inputs: sampled_ids,
+                            model.rewards: rewards
+                        }
+                    )
 
                     step_time += (time.time() - start_time)
                     if step % para.steps_per_stats == 0:
-                        print('reward: %.2f' % (np.mean(rewards)))
+                        print('step: %d, reward: %.2f step_time: %.2f' %
+                            (step, np.mean(rewards), step_time / para.steps_per_stats))
                         step_time = 0
                     break
 

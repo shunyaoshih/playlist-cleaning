@@ -34,7 +34,7 @@ class SRCNN():
                 print('build reinforcement learning graph')
                 self.set_input()
                 self.build_graph()
-                self.build_optimizer()
+                self.build_rl_optimizer()
 
         if self.para.mode == 'valid':
             self.para.mode = 'valid'
@@ -73,14 +73,6 @@ class SRCNN():
             self.decoder_inputs_len = self.raw_decoder_inputs_len
             # self.decoder_targets: [batch_size, max_len]
             self.decoder_targets = self.raw_decoder_inputs
-            # self.sampled_ids_inputs: [batch_size, max_len]
-            self.sampled_ids_inputs = tf.placeholder(
-                dtype=tf.int32, shape=(None, self.para.max_len)
-            )
-            # self.reward: [batch_size]
-            self.rewards = tf.placeholder(
-                dtype=self.dtype, shape=(None,)
-            )
 
             self.predict_count = tf.reduce_sum(self.decoder_inputs_len)
 
@@ -292,7 +284,6 @@ class SRCNN():
             )
         elif self.para.mode == 'rl':
             self.sampled_ids = self.get_sampled_ids(self.outputs)
-            self.decoder_predicted_ids = self.get_predicted_ids(self.outputs)
 
             self.loss = self.compute_rl_loss(
                logits=self.outputs,
@@ -361,15 +352,12 @@ class SRCNN():
         return loss
 
     def build_optimizer(self):
-        self.opt = tf.train.AdamOptimizer()
-        grads = tf.gradients(self.loss, tf.trainable_variables())
-        self.update = self.opt.apply_gradients(
-            zip(grads, tf.trainable_variables())
-        )
+        self.optimizer = tf.train.AdamOptimizer()
+        self.update = self.optimizer.minimize(self.loss)
 
     def build_rl_optimizer(self):
-        self.rl_opt = tf.train.AdamOptimizer()
-        self.rl_update = self.rl_opt.minimize(self.rl_loss)
+        self.rl_opt = tf.train.GradientDescentOptimizer(self.para.rl_learning_rate)
+        self.rl_update = self.rl_opt.minimize(self.loss)
 
     def get_predicted_ids(self, outputs):
         ids = tf.argmax(outputs, axis=2)
