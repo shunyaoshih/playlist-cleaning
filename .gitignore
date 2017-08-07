@@ -3,5 +3,7 @@ lib/__pycache__/
 results/
 rnn_models/
 cnn_models/
+cnn_models_rl/
 *.tfrecords
 data/raw/
+get_kkradio.py
