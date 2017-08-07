@@ -117,18 +117,18 @@ if __name__ == "__main__":
 
                     # feed rewards and update the model
                     print('update the model')
-                    _ = sess.run(
-                        fetches=[
-                            model.rl_update,
-                        ],
-                        feed_dict={
-                            model.encoder_inputs: data[0],
-                            model.encoder_inputs_len: data[1],
-                            model.seed_song_inputs: data[2],
-                            model.sampled_ids_inputs: sampled_ids,
-                            model.rewards: rewards
-                        }
-                    )
+                    # _ = sess.run(
+                    #     fetches=[
+                    #         model.rl_update,
+                    #     ],
+                    #     feed_dict={
+                    #         model.encoder_inputs: data[0],
+                    #         model.encoder_inputs_len: data[1],
+                    #         model.seed_song_inputs: data[2],
+                    #         model.sampled_ids_inputs: sampled_ids,
+                    #         model.rewards: rewards
+                    #     }
+                    # )
 
                     step_time += (time.time() - start_time)
                     if step % para.steps_per_stats == 0:

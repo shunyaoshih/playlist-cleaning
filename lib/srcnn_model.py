@@ -19,33 +19,37 @@ class SRCNN():
         original_batch_size = deepcopy(self.para.batch_size)
 
         self.build_weights()
-        self.para.mode = 'train'
-        with tf.name_scope('train'):
-            print('build training graph')
-            self.set_input()
-            self.build_graph()
-            self.build_optimizer()
+        if self.para.mode == 'train':
+            self.para.mode = 'train'
+            with tf.name_scope('train'):
+                print('build training graph')
+                self.set_input()
+                self.build_graph()
+                self.build_optimizer()
 
-        tf.get_variable_scope().reuse_variables()
-        self.para.mode = 'rl'
-        with tf.name_scope('rl'):
-            print('build reinforcement learning graph')
-            self.set_input()
-            self.build_graph()
-            self.build_rl_optimizer()
+        # tf.get_variable_scope().reuse_variables()
+        if self.para.mode == 'rl':
+            self.para.mode = 'rl'
+            with tf.name_scope('rl'):
+                print('build reinforcement learning graph')
+                self.set_input()
+                self.build_graph()
+                self.build_optimizer()
 
-        self.para.mode = 'valid'
-        with tf.name_scope('valid'):
-            print('build validation graph')
-            self.set_input()
-            self.build_graph()
+        if self.para.mode == 'valid':
+            self.para.mode = 'valid'
+            with tf.name_scope('valid'):
+                print('build validation graph')
+                self.set_input()
+                self.build_graph()
 
-        self.para.mode = 'test'
-        self.para.batch_size = read_num_of_lines('results/in.txt')
-        with tf.name_scope('test'):
-            print('build testing graph')
-            self.set_input()
-            self.build_graph()
+        if self.para.mode == 'test':
+            self.para.mode = 'test'
+            self.para.batch_size = read_num_of_lines('results/in.txt')
+            with tf.name_scope('test'):
+                print('build testing graph')
+                self.set_input()
+                self.build_graph()
 
         self.para.mode = original_mode
         self.para.batch_size = original_batch_size
@@ -69,6 +73,14 @@ class SRCNN():
             self.decoder_inputs_len = self.raw_decoder_inputs_len
             # self.decoder_targets: [batch_size, max_len]
             self.decoder_targets = self.raw_decoder_inputs
+            # self.sampled_ids_inputs: [batch_size, max_len]
+            self.sampled_ids_inputs = tf.placeholder(
+                dtype=tf.int32, shape=(None, self.para.max_len)
+            )
+            # self.reward: [batch_size]
+            self.rewards = tf.placeholder(
+                dtype=self.dtype, shape=(None,)
+            )
 
             self.predict_count = tf.reduce_sum(self.decoder_inputs_len)
 
@@ -280,8 +292,9 @@ class SRCNN():
             )
         elif self.para.mode == 'rl':
             self.sampled_ids = self.get_sampled_ids(self.outputs)
+            self.decoder_predicted_ids = self.get_predicted_ids(self.outputs)
 
-            self.rl_loss = self.compute_rl_loss(
+            self.loss = self.compute_rl_loss(
                logits=self.outputs,
                labels=self.sampled_ids_inputs
             )
@@ -349,11 +362,14 @@ class SRCNN():
 
     def build_optimizer(self):
         self.opt = tf.train.AdamOptimizer()
-        self.update = self.opt.minimize(self.loss)
+        grads = tf.gradients(self.loss, tf.trainable_variables())
+        self.update = self.opt.apply_gradients(
+            zip(grads, tf.trainable_variables())
+        )
 
     def build_rl_optimizer(self):
         self.rl_opt = tf.train.AdamOptimizer()
-        self.rl_update = self.opt.minimize(self.rl_loss)
+        self.rl_update = self.rl_opt.minimize(self.rl_loss)
 
     def get_predicted_ids(self, outputs):
         ids = tf.argmax(outputs, axis=2)
