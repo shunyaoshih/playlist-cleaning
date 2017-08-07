@@ -37,9 +37,9 @@ class SRCNN():
         if self.para.mode == 'valid':
             self.para.mode = 'valid'
             with tf.name_scope('valid'):
-            print('build validation graph')
-            self.set_input()
-            self.build_graph()
+                print('build validation graph')
+                self.set_input()
+                self.build_graph()
 
         if self.para.mode == 'test':
             self.para.mode = 'test'
@@ -54,10 +54,10 @@ class SRCNN():
 
     def set_input(self):
         print('set input nodes...')
-        if self.para.mode == 'train':
+        if self.para.mode == 'train' or self.para.mode == 'valid':
             self.raw_encoder_inputs, self.raw_encoder_inputs_len, \
             self.raw_decoder_inputs, self.raw_decoder_inputs_len, \
-            self.raw_seed_song_inputs = self.read_batch_sequences('train')
+            self.raw_seed_song_inputs = self.read_batch_sequences(self.para.mode)
 
             # self.encoder_inputs: [batch_size, max_len]
             self.encoder_inputs = self.raw_encoder_inputs
@@ -283,7 +283,7 @@ class SRCNN():
             name='output_projection'
         )
 
-        if self.para.mode == 'train':
+        if self.para.mode == 'train' or self.para.mode == 'valid':
             self.loss = self.compute_loss(
                 logits=self.outputs,
                 labels=self.decoder_targets

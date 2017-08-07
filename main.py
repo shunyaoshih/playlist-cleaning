@@ -62,10 +62,15 @@ if __name__ == "__main__":
 
         print(para)
 
-        if para.nn == 'rnn' or para.mode != 'rl':
+        if para.nn == 'rnn':
             sv = tf.train.Supervisor(logdir=para.model_dir)
-        else:
-            sv = tf.train.Supervisor(logdir=para.model_dir, init_fn=load_pretrain)
+        elif para.nn == 'cnn':
+            if para.mode == 'valid' or para.mode == 'test':
+                sv = tf.train.Supervisor(logdir=para.model_dir, save_model_secs=0)
+            elif para.mode == 'train':
+                sv = tf.train.Supervisor(logdir=para.model_dir)
+            else:
+                sv = tf.train.Supervisor(logdir=para.model_dir, init_fn=load_pretrain)
         with sv.managed_session(config=config_setup()) as sess:
             para_file = open('%s/para.txt' % (para.model_dir), 'w')
             para_file.write(str(para))
