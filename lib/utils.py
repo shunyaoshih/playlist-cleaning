@@ -47,6 +47,10 @@ def read_testing_sequences(para):
     seqs = open('results/in_filtered.txt', 'r').read().splitlines()
     seqs = [seq.split(' ') for seq in seqs]
 
+    for i in range(len(seqs)):
+        if len(seqs[i]) > para.max_len - 1:
+            seqs[i] = seqs[i][:para.max_len - 1]
+
     dic = read_dictionary()
     # input of seed ids
     seed_ids = open('results/seed.txt', 'r').read().splitlines()

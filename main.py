@@ -49,11 +49,14 @@ if __name__ == "__main__":
                     if sv.should_stop():
                         break
                     start_time = time.time()
-                    [loss, predict_count, _] = sess.run([
-                        model.loss,
-                        model.predict_count,
-                        model.update,
-                    ])
+
+                    [loss, predict_count, _] = sess.run(
+                        fetches=[
+                            model.loss,
+                            model.predict_count,
+                            model.update,
+                        ],
+                    )
 
                     loss = loss * para.batch_size
                     perplexity = np.exp(loss / predict_count)
@@ -81,7 +84,7 @@ if __name__ == "__main__":
                     ])
                     data = [e.astype(np.int32) for e in data]
 
-                    print('get sampled ids')
+                    print('test: get sampled ids')
                     [x] = sess.run(
                         fetches=[
                             model.decoder_predicted_ids,
@@ -89,7 +92,7 @@ if __name__ == "__main__":
                         feed_dict={
                             model.encoder_inputs: data[0],
                             model.encoder_inputs_len: data[1],
-                            model.seed_song_inputs: data[2]
+                            model.seed_song_inputs: data[2],
                         }
                     )
                     print(x)
@@ -103,7 +106,7 @@ if __name__ == "__main__":
                         feed_dict={
                             model.encoder_inputs: data[0],
                             model.encoder_inputs_len: data[1],
-                            model.seed_song_inputs: data[2]
+                            model.seed_song_inputs: data[2],
                         }
                     )
                     print('sampled_ids\' shape: {}'.format(sampled_ids.shape))
@@ -119,9 +122,9 @@ if __name__ == "__main__":
                             model.rl_update,
                         ],
                         feed_dict={
-                            model.encoder_inputs: encoder_inputs,
-                            model.encoder_inputs_len: encoder_inputs_len,
-                            model.seed_song_inputs: seed_song_inputs,
+                            model.encoder_inputs: data[0],
+                            model.encoder_inputs_len: data[1],
+                            model.seed_song_inputs: data[2],
                             model.sampled_ids_inputs: sampled_ids,
                             model.rewards: rewards
                         }
@@ -155,7 +158,7 @@ if __name__ == "__main__":
                     feed_dict={
                         model.encoder_inputs: encoder_inputs,
                         model.encoder_inputs_len: encoder_inputs_len,
-                        model.seed_song_inputs: seed_song_inputs
+                        model.seed_song_inputs: seed_song_inputs,
                     }
                 )
                 print(predicted_ids.shape)
