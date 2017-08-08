@@ -20,6 +20,7 @@ def config_setup():
     return config
 
 def load_weights(para, sess, model):
+    # "xxxx_rl" => "rl"
     rl_mode = para.model_dir[len(para.model_dir) - 2:]
     if rl_mode != 'rl':
         ckpt = tf.train.get_checkpoint_state(para.model_dir)
@@ -35,6 +36,7 @@ def load_weights(para, sess, model):
             print('Loading model from %s' % ckpt.model_checkpoint_path)
             model.saver.restore(sess, ckpt.model_checkpoint_path)
         else:
+            # "xxxx_rl" => "xxxx"
             original_dir = para.model_dir[:len(para.model_dir) - 3]
             ckpt = tf.train.get_checkpoint_state(original_dir)
             if ckpt:
@@ -43,7 +45,13 @@ def load_weights(para, sess, model):
             else:
                 print('Loading model with fresh parameters')
                 sess.run(tf.global_variables_initializer())
-    return model
+
+def save_model(para, sess, model):
+    [global_step] = sess.run([model.global_step])
+    checkpoint_path = os.path.join(para.model_dir,
+                                    "model.ckpt")
+    model.saver.save(sess, checkpoint_path,
+                        global_step=global_step)
 
 if __name__ == "__main__":
     para = params_setup()
@@ -73,8 +81,10 @@ if __name__ == "__main__":
                 model = SRCNN(para)
 
     with tf.Session(config=config_setup(), graph=graph) as sess:
-        model = load_weights(para, sess, model)
-        print('weights loaded')
+        # need to initialize variables no matter what you want to do later
+        sess.run(tf.global_variables_initializer())
+
+        load_weights(para, sess, model)
 
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
@@ -101,11 +111,7 @@ if __name__ == "__main__":
                         print('step: %d, perplexity: %.2f step_time: %.2f' %
                             (step, perplexity, step_time / para.steps_per_stats))
                         step_time = 0
-                        [global_step] = sess.run([model.global_step])
-                        checkpoint_path = os.path.join(para.model_dir,
-                                                       "model.ckpt")
-                        model.saver.save(sess, checkpoint_path,
-                                         global_step=global_step)
+                        save_model(para, sess, model)
                     break
 
             elif para.mode == 'rl':
@@ -154,7 +160,7 @@ if __name__ == "__main__":
                     if step % para.steps_per_stats == 0:
                         print('step: %d, reward: %.2f step_time: %.2f' %
                             (step, np.mean(rewards), step_time / para.steps_per_stats))
-                        step_time = 0
+                        save_model(para, sess, model)
                     break
 
             elif para.mode =='valid':
@@ -168,7 +174,6 @@ if __name__ == "__main__":
                     print('perplexity: %.2f' % perplexity)
 
             elif para.mode == 'test':
-                print('testing')
                 encoder_inputs, encoder_inputs_len, seed_song_inputs = \
                     read_testing_sequences(para)
 
@@ -183,7 +188,6 @@ if __name__ == "__main__":
                         model.seed_song_inputs: seed_song_inputs,
                     }
                 )
-                print(predicted_ids.shape)
 
                 output_file = open('results/{}_out.txt'.format(para.nn), 'w')
                 output_file.write(dict_id_to_song_id(para, predicted_ids))
