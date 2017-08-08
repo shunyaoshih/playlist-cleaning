@@ -401,7 +401,7 @@ class Multi_Task_Seq2Seq():
         """ read a batch from .tfrecords """
 
         file_queue = tf.train.string_input_producer(
-            ['./data/{}_rnn_train.tfrecords'.format(mode)]
+            ['./data/rnn_{}.tfrecords'.format(mode)]
         )
 
         ei, ei_len, di, di_len, sid = self.read_one_sequence(file_queue)

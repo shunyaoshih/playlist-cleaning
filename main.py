@@ -8,7 +8,7 @@ import tensorflow as tf
 import numpy as np
 
 from lib.config import params_setup
-from lib.utils import read_testing_sequences, word_id_to_song_id
+from lib.utils import read_testing_sequences, dict_id_to_song_id
 from lib.utils import reward_functions
 from lib.multi_task_seq2seq_model import Multi_Task_Seq2Seq
 from lib.srcnn_model import SRCNN
@@ -19,12 +19,31 @@ def config_setup():
     config.allow_soft_placement = True
     return config
 
-def load_pretrain(sess):
-    # only when these is no model under model_dir, this funciont will be called
-    pre_train_dir = para.model_dir[:len(para.model_dir) - 3]
-    print('Loading model from %s' % pre_train_dir)
-    ckpt = tf.train.get_checkpoint_state(pre_train_dir)
-    pre_train_saver.restore(sess, ckpt.model_checkpoint_path)
+def load_weights(para, sess, model):
+    rl_mode = para.model_dir[len(para.model_dir) - 2:]
+    if rl_mode != 'rl':
+        ckpt = tf.train.get_checkpoint_state(para.model_dir)
+        if ckpt:
+            print('Loading model from %s' % ckpt.model_checkpoint_path)
+            model.saver.restore(sess, ckpt.model_checkpoint_path)
+        else:
+            print('Loading model with fresh parameters')
+            sess.run(tf.global_variables_initializer())
+    else:
+        ckpt = tf.train.get_checkpoint_state(para.model_dir)
+        if ckpt:
+            print('Loading model from %s' % ckpt.model_checkpoint_path)
+            model.saver.restore(sess, ckpt.model_checkpoint_path)
+        else:
+            original_dir = para.model_dir[:len(para.model_dir) - 3]
+            ckpt = tf.train.get_checkpoint_state(original_dir)
+            if ckpt:
+                print('Loading model from %s' % ckpt.model_checkpoint_path)
+                model.saver.restore(sess, ckpt.model_checkpoint_path)
+            else:
+                print('Loading model with fresh parameters')
+                sess.run(tf.global_variables_initializer())
+    return model
 
 if __name__ == "__main__":
     para = params_setup()
@@ -32,55 +51,38 @@ if __name__ == "__main__":
     if para.nn == 'rnn' and para.mode == 'rl':
         raise NameError('there is no support of RL on rnn')
 
-    with tf.Graph().as_default():
+    try:
+        os.makedirs(para.model_dir)
+    except os.error:
+        pass
+    para_file = open(para.model_dir + '/para.txt', 'w')
+    para_file.write(str(para))
+    para_file.close()
+
+    print(para)
+
+    graph = tf.Graph()
+    with graph.as_default():
         initializer = tf.random_uniform_initializer(
-            -para.init_weight, para.init_weight
+          -para.init_weight, para.init_weight
         )
-        if para.nn == 'rnn':
-            with tf.variable_scope('model', reuse=None, initializer=initializer):
+        with tf.variable_scope('model', initializer=initializer):
+            if para.nn == 'rnn':
                 model = Multi_Task_Seq2Seq(para)
-                pretrained_variables = tf.get_collection(
-                    tf.GraphKeys.TRAINABLE_VARIABLES,
-                    scope='model'
-                )
-        elif para.nn == 'cnn':
-            with tf.variable_scope('model', reuse=None, initializer=initializer):
+            elif para.nn == 'cnn':
                 model = SRCNN(para)
-                pretrained_variables = tf.get_collection(
-                    tf.GraphKeys.TRAINABLE_VARIABLES,
-                    scope='model'
-                )
-        if para.nn == 'cnn':
-            for var in pretrained_variables:
-                print("\t{}\t{}".format(var.name, var.get_shape()))
-            pre_train_saver = tf.train.Saver(pretrained_variables)
+
+    with tf.Session(config=config_setup(), graph=graph) as sess:
+        model = load_weights(para, sess, model)
+        print('weights loaded')
+
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
         try:
-            os.makedirs(para.model_dir)
-        except os.error:
-            pass
-
-        print(para)
-
-        if para.nn == 'rnn':
-            sv = tf.train.Supervisor(logdir=para.model_dir)
-        elif para.nn == 'cnn':
-            if para.mode == 'valid' or para.mode == 'test':
-                sv = tf.train.Supervisor(logdir=para.model_dir, save_model_secs=0)
-            elif para.mode == 'train':
-                sv = tf.train.Supervisor(logdir=para.model_dir)
-            else:
-                sv = tf.train.Supervisor(logdir=para.model_dir, init_fn=load_pretrain)
-        with sv.managed_session(config=config_setup()) as sess:
-            para_file = open('%s/para.txt' % (para.model_dir), 'w')
-            para_file.write(str(para))
-            para_file.close()
-
             if para.mode == 'train':
                 step_time = 0.0
                 for step in range(20000):
-                    if sv.should_stop():
-                        break
                     start_time = time.time()
 
                     [loss, predict_count, _] = sess.run(
@@ -99,13 +101,16 @@ if __name__ == "__main__":
                         print('step: %d, perplexity: %.2f step_time: %.2f' %
                             (step, perplexity, step_time / para.steps_per_stats))
                         step_time = 0
+                        [global_step] = sess.run([model.global_step])
+                        checkpoint_path = os.path.join(para.model_dir,
+                                                       "model.ckpt")
+                        model.saver.save(sess, checkpoint_path,
+                                         global_step=global_step)
                     break
 
             elif para.mode == 'rl':
                 step_time = 0.0
                 for step in range(20000):
-                    if sv.should_stop():
-                        break
                     start_time = time.time()
 
                     # get input data
@@ -153,7 +158,7 @@ if __name__ == "__main__":
                     break
 
             elif para.mode =='valid':
-                for i in range(10):
+                for i in range(5):
                     [loss, predict_count] = sess.run([
                         model.loss,
                         model.predict_count,
@@ -163,6 +168,7 @@ if __name__ == "__main__":
                     print('perplexity: %.2f' % perplexity)
 
             elif para.mode == 'test':
+                print('testing')
                 encoder_inputs, encoder_inputs_len, seed_song_inputs = \
                     read_testing_sequences(para)
 
@@ -180,5 +186,13 @@ if __name__ == "__main__":
                 print(predicted_ids.shape)
 
                 output_file = open('results/{}_out.txt'.format(para.nn), 'w')
-                output_file.write(word_id_to_song_id(para, predicted_ids))
+                output_file.write(dict_id_to_song_id(para, predicted_ids))
                 output_file.close()
+
+        except KeyboardInterrupt:
+            print('KeyboardInterrupt')
+
+        finally:
+            print('Stop')
+            coord.request_stop()
+            coord.join(threads)

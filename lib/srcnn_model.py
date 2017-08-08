@@ -11,65 +11,62 @@ from lib.utils import read_num_of_lines
 class SRCNN():
     def __init__(self, para):
         self.para = para
-
         self.dtype = tf.float32
         self.global_step = tf.Variable(0, trainable=False, name='global_step')
-
-        original_mode = deepcopy(self.para.mode)
-        original_batch_size = deepcopy(self.para.batch_size)
+        self.saver = tf.train.Saver(max_to_keep=2)
 
         self.build_weights()
         if self.para.mode == 'train':
+            print('build training graph')
             with tf.name_scope('train'):
-                print('build training graph')
                 self.set_input()
                 self.build_graph()
                 self.build_optimizer()
 
-        if self.para.mode == 'rl':
+        elif self.para.mode == 'rl':
+            print('build reinforcement learning graph')
             with tf.name_scope('rl'):
-                print('build reinforcement learning graph')
                 self.set_input()
                 self.build_graph()
                 self.build_rl_optimizer()
 
-        # tf.get_variable_scope().reuse_variables()
-        if self.para.mode == 'valid':
-            self.para.mode = 'valid'
+        elif self.para.mode == 'valid':
+            print('build validation graph')
             with tf.name_scope('valid'):
-                print('build validation graph')
                 self.set_input()
                 self.build_graph()
 
-        if self.para.mode == 'test':
-            self.para.mode = 'test'
-            self.para.batch_size = read_num_of_lines('results/in.txt')
-            with tf.name_scope('test'):
-                print('build testing graph')
+        elif self.para.mode == 'test':
+            print('build testing graph')
+            with tf.name_scope(''):
                 self.set_input()
                 self.build_graph()
-
-        self.para.mode = original_mode
-        self.para.batch_size = original_batch_size
 
     def set_input(self):
+        """
+            This funciton contructs all input data for all modes.
+
+            encoder_inputs: [batch_size, max_len]
+            encoder_inputs: [batch_size]
+            seed_song_inpuds: [batch_size]
+            decoder_inputs: [batch_size, max_len]
+            decoder_inputs_len: [batch_size]
+            decoder_targets: [batch_size, max_len]
+            sampled_ids_inputs:[batch_size, max_len]
+            rewards: [batch_size]
+        """
+
         print('set input nodes...')
         if self.para.mode == 'train' or self.para.mode == 'valid':
             self.raw_encoder_inputs, self.raw_encoder_inputs_len, \
             self.raw_decoder_inputs, self.raw_decoder_inputs_len, \
             self.raw_seed_song_inputs = self.read_batch_sequences(self.para.mode)
 
-            # self.encoder_inputs: [batch_size, max_len]
             self.encoder_inputs = self.raw_encoder_inputs
-            # self.encdoer_inputs_len: [batch_size]
             self.encoder_inputs_len = self.raw_encoder_inputs_len
-            # self.seed_song_inputs: [batch_size]
             self.seed_song_inputs = self.raw_seed_song_inputs
-            # self.decoder_inputs: [batch_size, decoder_max_len]
             self.decoder_inputs = self.raw_decoder_inputs
-            # self.decoder_inputs_len: [batch_size]
             self.decoder_inputs_len = self.raw_decoder_inputs_len
-            # self.decoder_targets: [batch_size, max_len]
             self.decoder_targets = self.raw_decoder_inputs
 
             self.predict_count = tf.reduce_sum(self.decoder_inputs_len)
@@ -78,44 +75,36 @@ class SRCNN():
             self.raw_encoder_inputs, self.raw_encoder_inputs_len, _, _, \
             self.raw_seed_song_inputs = self.read_batch_sequences('train')
 
-            # self.encoder_inputs: [batch_size, max_len]
             self.encoder_inputs = tf.placeholder(
                 dtype=tf.int32, shape=(None, self.para.max_len),
                 name='encoder_inputs'
             )
-            # encoder_inputs_length: [batch_size]
             self.encoder_inputs_len = tf.placeholder(
                 dtype=tf.int32, shape=(None,),
                 name='encoder_inputs_len'
             )
-            # self.seed_song_inputs: [batch_size]
             self.seed_song_inputs = tf.placeholder(
                 dtype=tf.int32, shape=(None,),
                 name='seed_song_inputs'
             )
-            # self.sampled_ids_inputs: [batch_size, max_len]
             self.sampled_ids_inputs = tf.placeholder(
                 dtype=tf.int32, shape=(None, self.para.max_len),
                 name='sampled_ids_inputs'
             )
-            # self.reward: [batch_size]
             self.rewards = tf.placeholder(
                 dtype=self.dtype, shape=(None,),
                 name='rewards'
             )
 
         elif self.para.mode == 'test':
-            # self.encoder_inputs: [batch_size, max_len]
             self.encoder_inputs = tf.placeholder(
                 dtype=tf.int32, shape=(None, self.para.max_len),
                 name='encoder_inputs'
             )
-            # encoder_inputs_length: [batch_size]
             self.encoder_inputs_len = tf.placeholder(
                 dtype=tf.int32, shape=(None,),
                 name='encoder_inputs_len'
             )
-            # self.seed_song_inputs: [batch_size]
             self.seed_song_inputs = tf.placeholder(
                 dtype=tf.int32, shape=(None,),
                 name='seed_song_inputs'
@@ -147,6 +136,7 @@ class SRCNN():
         )
         inputs_shape = tf.shape(self.encoder_inputs_embedded)
 
+        print('SRCNN\'s input: ' , end='')
         print(self.encoder_inputs_embedded.get_shape())
         conv1 = tf.nn.conv2d(
             input=self.encoder_inputs_embedded,
@@ -154,6 +144,7 @@ class SRCNN():
             strides=[1, 1, 1, 1],
             padding='VALID'
         )
+        print('After 1st convolution: ', end='')
         print(conv1.get_shape())
         if self.para.batch_norm == 1:
             conv1_bn = self.batch_normalization(
@@ -173,6 +164,7 @@ class SRCNN():
             strides=[1, 1, 1, 1],
             padding='VALID'
         )
+        print('After 2nd convolution: ', end='')
         print(conv2.get_shape())
         if self.para.batch_norm == 1:
             conv2_bn = self.batch_normalization(
@@ -192,6 +184,7 @@ class SRCNN():
             strides=[1, 1, 1, 1],
             padding='VALID'
         )
+        print('After 3rd convolution: ', end='')
         print(conv3.get_shape())
         if self.para.batch_norm == 1:
             conv3_bn = self.batch_normalization(
@@ -213,6 +206,7 @@ class SRCNN():
             padding='VALID'
         )
         inv_conv3 = self.residual(inv_conv3, conv2)
+        print('After 1st deconvolution: ', end='')
         print(inv_conv3.get_shape())
         if self.para.batch_norm == 1:
             inv_conv3_bn = self.batch_normalization(
@@ -234,6 +228,7 @@ class SRCNN():
             padding='VALID'
         )
         inv_conv2 = self.residual(inv_conv2, conv1)
+        print('After 2nd deconvolution: ', end='')
         print(inv_conv2.get_shape())
         if self.para.batch_norm == 1:
             inv_conv2_bn = self.batch_normalization(
@@ -260,6 +255,7 @@ class SRCNN():
         self.residual_outputs = self.residual(
             self.residual_outputs, self.seed_song_embedded
         )
+        print('After 3rd deconvolution: ', end='')
         print(inv_conv1.get_shape())
         if self.para.batch_norm == 1:
             inv_conv1_bn = self.batch_normalization(
@@ -307,8 +303,6 @@ class SRCNN():
         """ global normalization """
 
         mean, variance = tf.nn.moments(input_tensor, [0, 1, 2])
-        # print(mean.get_shape())
-        # print(variance.get_shape())
         input_tensor_norm = tf.nn.batch_normalization(
             x=input_tensor,
             mean=mean,
@@ -387,7 +381,7 @@ class SRCNN():
         """ read a batch from .tfrecords """
 
         file_queue = tf.train.string_input_producer(
-            ['./data/{}_cnn_train.tfrecords'.format(mode)]
+            ['./data/cnn_{}.tfrecords'.format(mode)]
         )
 
         ei, ei_len, di, di_len, sid = self.read_one_sequence(file_queue)
@@ -410,6 +404,7 @@ class SRCNN():
         decoder_inputs_len = tf.reshape(decoder_inputs_len,
                                         [self.para.batch_size])
         seed_ids = tf.reshape(seed_ids, [self.para.batch_size])
+
         return encoder_inputs, tf.to_int32(encoder_inputs_len), \
                decoder_inputs, tf.to_int32(decoder_inputs_len), seed_ids
 
@@ -489,7 +484,7 @@ class SRCNN():
             'inv_b2': tf.Variable(
                 tf.zeros([64]),
                 dtype=self.dtype,
-                name='b2'
+                name='inv_b2'
             ),
             'inv_b1': tf.Variable(
                 tf.zeros([1]),

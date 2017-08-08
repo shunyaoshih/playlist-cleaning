@@ -1,9 +1,10 @@
 """ data processing functions """
+
 import numpy as np
 from copy import deepcopy
 from collections import defaultdict
 
-__all__ = ['word_id_to_song_id',
+__all__ = ['dict_id_to_song_id',
            'read_testing_sequences',
            'read_num_of_lines',
            'get_max_len',
@@ -58,11 +59,6 @@ def read_testing_sequences(para):
 
     seqs = [[dic[word] for word in seq] for seq in seqs]
     seqs = [seq + [2] for seq in seqs]
-    if para.debug == 1:
-        debug_dic = read_dictionary()
-        for seq in seqs:
-            seq = [debug_dic[word] for word in seq]
-            print(seq)
 
     seqs_len = [len(seq) for seq in seqs]
     seqs = [np.array(seq + [0] * (para.max_len - len(seq))) for seq in seqs]
@@ -81,7 +77,7 @@ def remove_duplicates(seq):
     seen_add = seen.add
     return [x for x in seq if not(x in seen or seen_add(x))]
 
-def word_id_to_song_id(para, predicted_ids):
+def dict_id_to_song_id(para, predicted_ids):
     dic = open(dictionary_path, 'r').read().splitlines()
     # predicted_ids: [batch_size, <= max_len, beam_width]
     predicted_ids = numpy_array_to_list(predicted_ids)

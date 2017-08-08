@@ -47,7 +47,7 @@ def convert_to_tf_format(mode):
     print('num of data: %d' % (len(encoder_seqs)))
     print('max len: %d' % (len(decoder_seqs[0]) - 1))
 
-    writer = tf.python_io.TFRecordWriter('{}_rnn_train.tfrecords'.format(mode))
+    writer = tf.python_io.TFRecordWriter('rnn_{}.tfrecords'.format(mode))
     for i in tqdm(range(len(encoder_seqs))):
         example = tf.train.Example(features=tf.train.Features(feature={
             'encoder_input': _list_feature(encoder_seqs[i]),
