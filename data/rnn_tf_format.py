@@ -60,7 +60,6 @@ def convert_to_tf_format(mode):
     writer.close()
 
 if __name__ == "__main__":
-    # if not os.path.exists('./rnn_train.tfrecords'):
     print('max_len should be less or equal to {}'.format(max_len - 1))
     convert_to_tf_format('train')
     convert_to_tf_format('valid')
