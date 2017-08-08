@@ -79,6 +79,10 @@ if __name__ == "__main__":
                 model = Multi_Task_Seq2Seq(para)
             elif para.nn == 'cnn':
                 model = SRCNN(para)
+        variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
+                                      scope='model')
+    for var in variables:
+        print('\t{}\t{}'.format(var.name, var.get_shape()))
 
     with tf.Session(config=config_setup(), graph=graph) as sess:
         # need to initialize variables no matter what you want to do later
