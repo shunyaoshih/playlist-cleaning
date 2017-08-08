@@ -116,7 +116,8 @@ if __name__ == "__main__":
                             (step, perplexity, step_time / para.steps_per_stats))
                         step_time = 0
                         save_model(para, sess, model)
-                    break
+                    if para.debug:
+                        break
 
             elif para.mode == 'rl':
                 step_time = 0.0
@@ -165,7 +166,8 @@ if __name__ == "__main__":
                         print('step: %d, reward: %.2f step_time: %.2f' %
                             (step, np.mean(rewards), step_time / para.steps_per_stats))
                         save_model(para, sess, model)
-                    break
+                    if para.debug:
+                        break
 
             elif para.mode =='valid':
                 for i in range(5):
