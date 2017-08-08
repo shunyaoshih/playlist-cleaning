@@ -41,6 +41,7 @@ class SRCNN():
                 self.set_input()
                 self.build_graph()
 
+        # saver must be called after all definition of variables
         self.saver = tf.train.Saver(max_to_keep=2)
 
     def set_input(self):

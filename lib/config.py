@@ -52,7 +52,7 @@ def params_setup():
         para.decay_steps = 5000
 
     if para.debug == 1:
-        para.num_units = 2
+        para.num_units = 14
         para.num_layers = 2
         para.batch_size = 2
         para.embedding_size = 14 # let cnn have a valid debug mode
