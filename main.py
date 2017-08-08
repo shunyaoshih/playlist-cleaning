@@ -112,10 +112,12 @@ if __name__ == "__main__":
 
                     step_time += (time.time() - start_time)
                     if step % para.steps_per_stats == 0:
-                        print('step: %d, perplexity: %.2f step_time: %.2f' %
-                            (step, perplexity, step_time / para.steps_per_stats))
-                        step_time = 0
+                        print('step: %d, perplexity: %.2f step_time: %.2f ' %
+                              (step, perplexity, step_time / para.steps_per_stats),
+                              end='')
                         save_model(para, sess, model)
+                        print(' --> save model')
+                        step_time = 0
                     if para.debug:
                         break
 
@@ -163,9 +165,12 @@ if __name__ == "__main__":
 
                     step_time += (time.time() - start_time)
                     if step % para.steps_per_stats == 0:
-                        print('step: %d, reward: %.2f step_time: %.2f' %
-                            (step, np.mean(rewards), step_time / para.steps_per_stats))
+                        print('step: %d, perplexity: %.2f step_time: %.2f ' %
+                              (step, perplexity, step_time / para.steps_per_stats),
+                              end='')
                         save_model(para, sess, model)
+                        print(' --> save model')
+                        step_time = 0
                     if para.debug:
                         break
 
