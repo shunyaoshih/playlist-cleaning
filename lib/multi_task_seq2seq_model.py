@@ -2,9 +2,7 @@
 
 from copy import deepcopy
 
-import numpy as np
 import tensorflow as tf
-
 import tensorflow.contrib.seq2seq as seq2seq
 from tensorflow.contrib.seq2seq.python.ops import attention_wrapper
 from tensorflow.python.layers.core import Dense, dense
@@ -18,79 +16,75 @@ class Multi_Task_Seq2Seq():
 
     def __init__(self, para):
         self.para = para
-
         self.dtype = tf.float32
         self.global_step = tf.Variable(0, trainable=False, name='global_step')
 
-        original_mode = deepcopy(self.para.mode)
-        original_batch_size = deepcopy(self.para.batch_size)
-
-        with tf.name_scope('train'):
+        if self.para.mode =='train':
             print('build training graph')
-            self.para.mode = 'train'
-            self.set_input()
-            self.build_playlist_encoder()
-            self.build_seed_song_encoder()
-            self.build_concat_layer()
-            self.build_decoder()
-            self.build_optimizer()
+            with tf.name_scope('train'):
+                self.set_input()
+                self.build_playlist_encoder()
+                self.build_seed_song_encoder()
+                self.build_concat_layer()
+                self.build_decoder()
+                self.build_optimizer()
 
-        tf.get_variable_scope().reuse_variables()
-        self.para.mode = 'valid'
-        with tf.name_scope('valid'):
+        elif self.para.mode == 'valid':
             print('build validation graph')
-            self.set_input()
-            self.build_playlist_encoder()
-            self.build_seed_song_encoder()
-            self.build_concat_layer()
-            self.build_decoder()
+            with tf.name_scope('valid'):
+                self.set_input()
+                self.build_playlist_encoder()
+                self.build_seed_song_encoder()
+                self.build_concat_layer()
+                self.build_decoder()
 
-        self.para.mode = 'test'
-        self.para.batch_size = read_num_of_lines('results/in.txt')
-        with tf.name_scope('test'):
+        elif self.para.mode == 'test':
             print('build testing graph')
-            self.set_input()
-            self.build_playlist_encoder()
-            self.build_seed_song_encoder()
-            self.build_concat_layer()
-            self.build_decoder()
+            with tf.name_scope('test'):
+                self.set_input()
+                self.build_playlist_encoder()
+                self.build_seed_song_encoder()
+                self.build_concat_layer()
+                self.build_decoder()
 
-        self.para.mode = original_mode
-        self.para.batch_size = original_batch_size
+        self.saver = tf.train.Saver(max_to_keep=2)
 
     def set_input(self):
+        """
+            This funciton contructs all input data for all modes.
+
+            encoder_inputs: [batch_size, max_len]
+            encoder_inputs: [batch_size]
+            seed_song_inpuds: [batch_size]
+            decoder_inputs: [batch_size, max_len]
+            decoder_inputs_len: [batch_size]
+            decoder_targets: [batch_size, max_len]
+        """
+
         print('set input nodes...')
         if self.para.mode == 'train' or self.para.mode == 'valid':
             self.raw_encoder_inputs, self.raw_encoder_inputs_len, \
             self.raw_decoder_inputs, self.raw_decoder_inputs_len, \
             self.raw_seed_song_inputs = self.read_batch_sequences(self.para.mode)
 
-            # self.encoder_inputs: [batch_size, max_len]
             self.encoder_inputs = self.raw_encoder_inputs[:, 1:]
-            # self.encdoer_inputs_len: [batch_size]
             self.encoder_inputs_len = self.raw_encoder_inputs_len
-            # self.seed_song_inputs: [batch_size]
             self.seed_song_inputs = self.raw_seed_song_inputs
-            # self.decoder_inputs: [batch_size, decoder_max_len]
             self.decoder_inputs = self.raw_decoder_inputs[:, :-1]
-            # self.decoder_inputs_len: [batch_size]
             self.decoder_inputs_len = self.raw_decoder_inputs_len
-            # self.decoder_targets: [batch_size, max_len]
             self.decoder_targets = self.raw_decoder_inputs[:, 1:]
 
             self.predict_count = tf.reduce_sum(self.decoder_inputs_len)
+
         elif self.para.mode == 'test':
-            # self.encoder_inputs: [batch_size, max_len]
             self.encoder_inputs = tf.placeholder(
                 dtype=tf.int32,
                 shape=(None, self.para.max_len),
             )
-            # encoder_inputs_length: [batch_size]
             self.encoder_inputs_len = tf.placeholder(
                 dtype=tf.int32,
                 shape=(None,)
             )
-            # self.seed_song_inputs: [batch_size]
             self.seed_song_inputs = tf.placeholder(
                 dtype=tf.int64,
                 shape=(None,)
@@ -316,20 +310,6 @@ class Multi_Task_Seq2Seq():
         )
         loss = tf.reduce_sum(crossent * self.masks) / \
                tf.to_float(self.para.batch_size)
-        return loss
-
-    def sampled_softmax_loss(self):
-        """ TODO: self-defined sampled softmax loss
-        Args:
-            self.rnn_output_padded: [batch_size, max_len, decoder_vocab_size]
-            self.decoder_targets: [batch_size, max_len]
-            self.masks: [batch_size, max_len]
-            labels: [batch_size * max_len, num_samples(decoder_vocab_size)]
-            (true prob distribution)
-            logits: [batch_size * max_len, num_samples(decoder_vocab_size)]
-        """
-        loss = None
-
         return loss
 
     def build_encoder_cell(self):

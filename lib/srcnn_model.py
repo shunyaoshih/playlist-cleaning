@@ -13,7 +13,6 @@ class SRCNN():
         self.para = para
         self.dtype = tf.float32
         self.global_step = tf.Variable(0, trainable=False, name='global_step')
-        self.saver = tf.train.Saver(max_to_keep=2)
 
         self.build_weights()
         if self.para.mode == 'train':
@@ -41,6 +40,8 @@ class SRCNN():
             with tf.name_scope(''):
                 self.set_input()
                 self.build_graph()
+
+        self.saver = tf.train.Saver(max_to_keep=2)
 
     def set_input(self):
         """
