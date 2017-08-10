@@ -147,7 +147,7 @@ if __name__ == "__main__":
                     )
 
                     # get reward
-                    rewards = reward_functions(para, sampled_ids)
+                    rewards, msg = reward_functions(para, sampled_ids)
 
                     # feed rewards and update the model
                     _ = sess.run(
@@ -165,9 +165,10 @@ if __name__ == "__main__":
 
                     step_time += (time.time() - start_time)
                     if step % para.steps_per_stats == 0:
-                        print('step: %d, rewards: %.2f step_time: %.2f ' %
-                              (step, rewards, step_time / para.steps_per_stats),
-                              end='')
+                        print('step: %d, rewards: %.2f step_time: %.2f' %
+                              (step, np.mean(rewards), step_time / para.steps_per_stats),
+                              end=' ')
+                        print('length: %.2f' % (msg['length']), end=' ')
                         save_model(para, sess, model)
                         print(' --> save model')
                         step_time = 0

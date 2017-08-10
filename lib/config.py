@@ -61,7 +61,9 @@ def params_setup():
 
     if para.model_dir == 'models':
         para.model_dir = './' + para.nn + '_' + para.model_dir
-    if para.mode == 'rl':
+
+    rl_mode = para.model_dir[len(para.model_dir) - 2:]
+    if para.mode == 'rl' and rl_mode != 'rl':
         para.model_dir += '_rl'
 
     if para.mode == 'test':

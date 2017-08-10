@@ -110,6 +110,23 @@ def dict_id_to_song_id(para, predicted_ids):
     return '\n'.join([' '.join(seq) for seq in song_id_seqs])
 
 def reward_functions(para, sampled_ids):
-    # TODO
     rewards = [0.0] * para.batch_size
-    return np.asarray(rewards)
+    msg = {}
+    msg['length'] = 0
+
+    sampled_ids = numpy_array_to_list(sampled_ids)
+    song_id_seqs = sampled_ids
+    song_id_seqs = [
+       [song_id for song_id in seq if check_valid_song_id(song_id)]
+       for seq in song_id_seqs
+    ]
+
+    for i in range(para.batch_size):
+        rewards[i] = -abs(30 - len(song_id_seqs[i]))
+        msg['length'] += len(song_id_seqs[i])
+    msg['length'] /= para.batch_size
+
+    rewards = np.asarray(rewards, dtype=np.float32)
+    rewards -= np.mean(rewards)
+
+    return rewards, msg
