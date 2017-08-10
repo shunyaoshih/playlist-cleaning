@@ -116,7 +116,7 @@ if __name__ == "__main__":
                               (step, perplexity, step_time / para.steps_per_stats),
                               end='')
                         save_model(para, sess, model)
-                        print(' --> save model')
+                        print(' --> save model to {}'.format(para.model_dir))
                         step_time = 0
                     if para.debug:
                         break
@@ -170,7 +170,7 @@ if __name__ == "__main__":
                               end=' ')
                         print('length: %.2f' % (msg['length']), end=' ')
                         save_model(para, sess, model)
-                        print(' --> save model')
+                        print(' --> save model to {}'.format(para.model_dir))
                         step_time = 0
                     if para.debug:
                         break
