@@ -174,6 +174,8 @@ if __name__ == "__main__":
                         step_time = 0
                     if para.debug:
                         break
+                    if step == 2:
+                        break
 
             elif para.mode =='valid':
                 for i in range(5):

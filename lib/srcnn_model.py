@@ -355,11 +355,19 @@ class SRCNN():
 
     def build_optimizer(self):
         self.optimizer = tf.train.AdamOptimizer()
-        self.update = self.optimizer.minimize(self.loss)
+        self.gradients = tf.gradients(self.loss, tf.trainable_variables())
+        # self.update = self.optimizer.minimize(self.loss)
+        self.update = self.optimizer.apply_gradients(
+            zip(self.gradients, tf.trainable_variables())
+        )
 
     def build_rl_optimizer(self):
         self.rl_opt = tf.train.GradientDescentOptimizer(self.para.rl_learning_rate)
-        self.rl_update = self.rl_opt.minimize(self.loss)
+        self.gradients = tf.gradients(self.loss, tf.trainable_variables())
+        # self.rl_update = self.rl_opt.minimize(self.loss)
+        self.rl_update = self.rl_opt.apply_gradients(
+            zip(self.gradients, tf.trainable_variables())
+        )
 
     def get_predicted_ids(self, outputs):
         ids = tf.argmax(outputs, axis=2)

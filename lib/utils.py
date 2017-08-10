@@ -118,6 +118,7 @@ def reward_functions(para, sampled_ids):
     msg = {}
     msg['length'] = 0
 
+    print(sampled_ids)
     sampled_ids = numpy_array_to_list(sampled_ids)
     song_id_seqs = sampled_ids
     song_id_seqs = [
@@ -126,13 +127,11 @@ def reward_functions(para, sampled_ids):
     ]
 
     for i in range(para.batch_size):
-        print(length_reward(song_id_seqs[i]))
         rewards[i] = length_reward(song_id_seqs[i])
         msg['length'] += len(song_id_seqs[i])
     msg['length'] /= para.batch_size
 
     rewards = np.asarray(rewards, dtype=np.float32)
-    print(np.mean(rewards))
     rewards -= 0.5
     print(rewards)
 
