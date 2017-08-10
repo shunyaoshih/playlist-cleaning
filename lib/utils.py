@@ -109,7 +109,11 @@ def dict_id_to_song_id(para, predicted_ids):
 
     return '\n'.join([' '.join(seq) for seq in song_id_seqs])
 
+def length_reward(seq):
+    return 1 - abs(30 - len(seq)) / 150
+
 def reward_functions(para, sampled_ids):
+    # approximate rewards' scale: -0.5 ~ 0.5
     rewards = [0.0] * para.batch_size
     msg = {}
     msg['length'] = 0
@@ -122,11 +126,14 @@ def reward_functions(para, sampled_ids):
     ]
 
     for i in range(para.batch_size):
-        rewards[i] = -abs(30 - len(song_id_seqs[i]))
+        print(length_reward(song_id_seqs[i]))
+        rewards[i] = length_reward(song_id_seqs[i])
         msg['length'] += len(song_id_seqs[i])
     msg['length'] /= para.batch_size
 
     rewards = np.asarray(rewards, dtype=np.float32)
-    rewards -= np.mean(rewards)
+    print(np.mean(rewards))
+    rewards -= 0.5
+    print(rewards)
 
     return rewards, msg
