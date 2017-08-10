@@ -33,9 +33,9 @@ def convert_to_tf_format(mode):
 
         encoder_seqs.append(encoder_seq_ids)
         encoder_seqs_len.append(len(encoder_seq_ids))
-        # decoder_seqs.append(decoder_seq_ids)
-        decoder_seqs.append(max_len)
-        decoder_seqs_len.append(len(decoder_seq_ids))
+        decoder_seqs.append(decoder_seq_ids)
+        # decoder_seqs_len.append(len(decoder_seq_ids))
+        decoder_seqs_len.append(max_len)
         seed_ids.append(int(seed_file[i]))
 
     mx = max([max(encoder_seqs_len), max(decoder_seqs_len)])
