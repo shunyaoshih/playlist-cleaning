@@ -107,6 +107,10 @@ if __name__ == "__main__":
                         ],
                     )
 
+                    [debug] = sess.run([model.debug])
+                    print(debug)
+                    exit()
+
                     loss = loss * para.batch_size
                     perplexity = np.exp(loss / predict_count)
 
@@ -150,7 +154,7 @@ if __name__ == "__main__":
                     rewards, msg = reward_functions(para, sampled_ids)
 
                     # feed rewards and update the model
-                    _ = sess.run(
+                    [_] = sess.run(
                         fetches=[
                             model.rl_update,
                         ],
@@ -173,8 +177,6 @@ if __name__ == "__main__":
                         print(' --> save model to {}'.format(para.model_dir))
                         step_time = 0
                     if para.debug:
-                        break
-                    if step == 2:
                         break
 
             elif para.mode =='valid':

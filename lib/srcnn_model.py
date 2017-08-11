@@ -341,7 +341,9 @@ class SRCNN():
             labels: [batch_size, max_len]
         """
         # log_p: [batch_size, max_len, decoder_vocab_size]
-        log_p = -tf.log(tf.nn.softmax(logits))
+        log_p = -tf.log(
+            tf.add(tf.nn.softmax(logits), tf.constant(1e-8, dtype=self.dtype))
+        )
         # labels: [batch_size, max_len, decoder_vocab_size]
         labels = tf.one_hot(
             indices=labels,
@@ -356,7 +358,10 @@ class SRCNN():
     def build_optimizer(self):
         self.optimizer = tf.train.AdamOptimizer()
         self.gradients = tf.gradients(self.loss, tf.trainable_variables())
-        # self.update = self.optimizer.minimize(self.loss)
+
+        debug = tf.gradients(self.loss, tf.trainable_variables())
+        self.debug = [i for i in debug if i != None]
+
         self.update = self.optimizer.apply_gradients(
             zip(self.gradients, tf.trainable_variables())
         )
@@ -364,7 +369,13 @@ class SRCNN():
     def build_rl_optimizer(self):
         self.rl_opt = tf.train.GradientDescentOptimizer(self.para.rl_learning_rate)
         self.gradients = tf.gradients(self.loss, tf.trainable_variables())
-        # self.rl_update = self.rl_opt.minimize(self.loss)
+
+        # debug = tf.gradients(self.loss, tf.trainable_variables())
+        # self.debug = []
+        # for i in range(len(debug)):
+        #     if debug[i] != None:
+        #         self.debug.append((tf.trainable_variables(), debug[i]))
+
         self.rl_update = self.rl_opt.apply_gradients(
             zip(self.gradients, tf.trainable_variables())
         )
