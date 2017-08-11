@@ -3,6 +3,7 @@
 import numpy as np
 from copy import deepcopy
 from collections import defaultdict
+from math import sqrt
 
 __all__ = ['dict_id_to_song_id',
            'read_testing_sequences',
@@ -110,7 +111,7 @@ def dict_id_to_song_id(para, predicted_ids):
     return '\n'.join([' '.join(seq) for seq in song_id_seqs])
 
 def length_reward(seq):
-    return 1 - abs(30 - len(seq)) / 150
+    return 1 - sqrt(abs(30 - len(seq)) / 150)
 
 def reward_functions(para, sampled_ids):
     # approximate rewards' scale: -0.5 ~ 0.5
