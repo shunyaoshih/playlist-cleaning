@@ -14,7 +14,7 @@ def params_setup():
     # parameters for multi-task seq2seq
     parser.add_argument('--attention_mode', type=str, default='luong', help='')
     parser.add_argument('--learning_rate', type=float, default=0.5, help='')
-    parser.add_argument('--rl_learning_rate', type=float, default=0.01, help='')
+    parser.add_argument('--rl_learning_rate', type=float, default=0.0005, help='')
     parser.add_argument('--init_weight', type=float, default=0.1, help='')
     parser.add_argument('--max_gradient_norm', type=float, default=5.0, help='')
     parser.add_argument('--num_units', type=int, default=128, help='')
