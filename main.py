@@ -107,10 +107,6 @@ if __name__ == "__main__":
                         ],
                     )
 
-                    [debug] = sess.run([model.debug])
-                    print(debug)
-                    exit()
-
                     loss = loss * para.batch_size
                     perplexity = np.exp(loss / predict_count)
 

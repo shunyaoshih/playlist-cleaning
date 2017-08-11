@@ -363,7 +363,8 @@ class SRCNN():
         self.debug = [i for i in debug if i != None]
 
         self.update = self.optimizer.apply_gradients(
-            zip(self.gradients, tf.trainable_variables())
+            zip(self.gradients, tf.trainable_variables()),
+            global_step=self.global_step
         )
 
     def build_rl_optimizer(self):
@@ -377,7 +378,8 @@ class SRCNN():
         #         self.debug.append((tf.trainable_variables(), debug[i]))
 
         self.rl_update = self.rl_opt.apply_gradients(
-            zip(self.gradients, tf.trainable_variables())
+            zip(self.gradients, tf.trainable_variables()),
+            global_step=self.global_step
         )
 
     def get_predicted_ids(self, outputs):
