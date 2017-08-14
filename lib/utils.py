@@ -139,9 +139,13 @@ def dict_id_to_song_id(para, predicted_ids):
     return '\n'.join([' '.join(seq) for seq in song_id_seqs])
 
 def cal_precision(true_positives, false_positives):
+    if true_positives == 0 and false_positives == 0:
+        return 0
     return (true_positives / (true_positives + false_positives))
 
 def cal_recall(true_positives, false_negatives):
+    if true_positives == 0 and false_negatives == 0:
+        return 0
     return (true_positives / (true_positives + false_negatives))
 
 def cal_precision_and_recall(predicted_ids, targets):
