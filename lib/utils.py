@@ -7,10 +7,12 @@ from math import sqrt
 from random import sample
 
 __all__ = ['dict_id_to_song_id',
+           'read_valid_sequences',
            'read_testing_sequences',
            'read_num_of_lines',
            'get_max_len',
-           'reward_functions']
+           'reward_functions',
+           'cal_precision_and_recall']
 
 dictionary_path = 'data/vocab_default.txt'
 
@@ -58,6 +60,9 @@ def read_valid_sequences(para):
     seed_song_inputs = [int(num) for num in seed_song_inputs]
     decoder_targets = [seq + [0] * (para.max_len - len(seq)) for seq in \
                        decoder_targets]
+
+    encoder_inputs = [[int(ID) for ID in seq] for seq in encoder_inputs]
+    decoder_targets = [[int(ID) for ID in seq] for seq in decoder_targets]
     return np.asarray(encoder_inputs), np.asarray(seed_song_inputs), \
            np.asarray(decoder_targets)
 
@@ -93,7 +98,7 @@ def read_testing_sequences(para):
 
 def check_valid_song_id(song_id):
     filter_list = [ 0, 1, 2, 3, -1]
-    return not song_id in filter_list
+    return not int(song_id) in filter_list
 
 def remove_duplicates(seq):
     seen = set()
@@ -132,6 +137,36 @@ def dict_id_to_song_id(para, predicted_ids):
     song_id_seqs = [remove_duplicates(seq) for seq in song_id_seqs]
 
     return '\n'.join([' '.join(seq) for seq in song_id_seqs])
+
+def cal_precision(true_positives, false_positives):
+    return (true_positives / (true_positives + false_positives))
+
+def cal_recall(true_positives, false_negatives):
+    return (true_positives / (true_positives + false_negatives))
+
+def cal_precision_and_recall(predicted_ids, targets):
+    predicted_ids = numpy_array_to_list(predicted_ids)
+    predicted_ids = [[ID[0] for ID in seq if check_valid_song_id(ID[0])] for seq in
+                     predicted_ids]
+    targets = [[ID for ID in seq if check_valid_song_id(ID)] for seq in
+               targets]
+
+    tp = 0
+    fp = 0
+    fn = 0
+    for i in range(len(predicted_ids)):
+        now_set = set(targets[i])
+        for j in range(len(predicted_ids[i])):
+            if predicted_ids[i][j] in now_set:
+                tp += 1
+            else:
+                fp += 1
+    for i in range(len(targets)):
+        now_set = set(predicted_ids[i])
+        for j in range(len(targets[i])):
+            if targets[i][j] not in now_set:
+                fn += 1
+    return cal_precision(tp, fp), cal_recall(tp, fn)
 
 def length_reward(seq):
     return 1 - sqrt(abs(30 - len(seq)) / 150)

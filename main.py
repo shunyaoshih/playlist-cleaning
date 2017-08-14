@@ -9,6 +9,7 @@ import numpy as np
 
 from lib.config import params_setup
 from lib.utils import read_testing_sequences, read_valid_sequences
+from lib.utils import cal_precision_and_recall
 from lib.utils import dict_id_to_song_id
 from lib.utils import reward_functions
 from lib.multi_task_seq2seq_model import Multi_Task_Seq2Seq
@@ -98,6 +99,7 @@ if __name__ == "__main__":
             if para.mode == 'train':
                 step_time = 0.0
                 prev_valid = 2 * para.decoder_vocab_size
+                total_acc = 0.0
                 for step in range(20000):
                     start_time = time.time()
 
@@ -114,16 +116,17 @@ if __name__ == "__main__":
 
                     step_time += (time.time() - start_time)
                     if step % para.steps_per_stats == 0:
-                        print('step: %d, perplexity: %.2f step_time: %.2f ' %
+                        print('step: %d, perplexity: %.2f step_time: %.2f, ' %
                               (step, perplexity, step_time / para.steps_per_stats),
                               end='')
 
                         if para.nn == 'cnn':
                             encoder_inputs, seed_song_inputs, decoder_targets = \
                                 read_valid_sequences(para)
-                            [valid_loss] = sess.run(
+                            [valid_loss, predicted_ids] = sess.run(
                                 fetches=[
-                                    model.valid_loss
+                                    model.valid_loss,
+                                    model.valid_predicted_ids,
                                 ],
                                 feed_dict={
                                     model.valid_encoder_inputs: encoder_inputs,
@@ -131,10 +134,20 @@ if __name__ == "__main__":
                                     model.valid_decoder_targets: decoder_targets,
                                 }
                             )
-                            print('valid loss: %.2f' % np.exp(valid_loss), end='')
+                            print('valid perplexity: %.2f, ' % np.exp(valid_loss),
+                                  end='')
 
-                            if valid_loss < prev_valid:
-                                prev_valid = valid_loss
+                            precision, recall = cal_precision_and_recall(
+                                predicted_ids, decoder_targets
+                            )
+                            print('precision: {}, recall, {} '.format(
+                                precision, recall
+                            ), end=' ')
+
+                            # if valid_loss < prev_valid:
+                            #     prev_valid = valid_loss
+                            if precision + recall > total_acc:
+                                total_acc = precision + recall
                                 save_model(para, sess, model)
                                 print(' --> save model to {}'.format(para.model_dir))
                             else:
