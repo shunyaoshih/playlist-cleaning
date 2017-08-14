@@ -8,7 +8,8 @@ import tensorflow as tf
 import numpy as np
 
 from lib.config import params_setup
-from lib.utils import read_testing_sequences, dict_id_to_song_id
+from lib.utils import read_testing_sequences, read_valid_sequences
+from lib.utils import dict_id_to_song_id
 from lib.utils import reward_functions
 from lib.multi_task_seq2seq_model import Multi_Task_Seq2Seq
 from lib.srcnn_model import SRCNN
@@ -96,6 +97,7 @@ if __name__ == "__main__":
         try:
             if para.mode == 'train':
                 step_time = 0.0
+                prev_valid = 2 * para.decoder_vocab_size
                 for step in range(20000):
                     start_time = time.time()
 
@@ -115,8 +117,29 @@ if __name__ == "__main__":
                         print('step: %d, perplexity: %.2f step_time: %.2f ' %
                               (step, perplexity, step_time / para.steps_per_stats),
                               end='')
-                        save_model(para, sess, model)
-                        print(' --> save model to {}'.format(para.model_dir))
+
+                        if para.nn == 'cnn':
+                            encoder_inputs, seed_song_inputs, decoder_targets = \
+                                read_valid_sequences(para)
+                            [valid_loss] = sess.run(
+                                fetches=[
+                                    model.valid_loss
+                                ],
+                                feed_dict={
+                                    model.valid_encoder_inputs: encoder_inputs,
+                                    model.valid_seed_song_inputs: seed_song_inputs,
+                                    model.valid_decoder_targets: decoder_targets,
+                                }
+                            )
+                            print('valid loss: %.2f' % np.exp(valid_loss), end='')
+
+                            if valid_loss < prev_valid:
+                                prev_valid = valid_loss
+                                save_model(para, sess, model)
+                                print(' --> save model to {}'.format(para.model_dir))
+                            else:
+                                print()
+
                         step_time = 0
                     if para.debug:
                         break

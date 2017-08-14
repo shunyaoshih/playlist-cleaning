@@ -22,6 +22,9 @@ class SRCNN():
                 self.build_graph()
                 self.build_optimizer()
 
+                tf.get_variable_scope().reuse_variables()
+                self.build_valid_graph()
+
         elif self.para.mode == 'rl':
             print('build reinforcement learning graph')
             with tf.name_scope('rl'):
@@ -72,6 +75,20 @@ class SRCNN():
             self.decoder_targets = self.raw_decoder_inputs
 
             self.predict_count = tf.reduce_sum(self.decoder_inputs_len)
+
+            if self.para.mode == 'train':
+                self.valid_encoder_inputs = tf.placeholder(
+                    dtype=tf.int32, shape=(None, self.para.max_len),
+                    name='valid_encoder_inputs'
+                )
+                self.valid_seed_song_inputs = tf.placeholder(
+                    dtype=tf.int32, shape=(None,),
+                    name='valid_seed_song_inputs'
+                )
+                self.valid_decoder_targets = tf.placeholder(
+                    dtype=tf.int32, shape=(None, self.para.max_len),
+                    name='valid_decoder_targets'
+                )
 
         elif self.para.mode == 'rl':
             self.raw_encoder_inputs, self.raw_encoder_inputs_len, _, _, \
@@ -297,6 +314,144 @@ class SRCNN():
             # compatible with the rnn model
             self.decoder_outputs = self.outputs
             self.decoder_predicted_ids = self.get_predicted_ids(self.outputs)
+
+    def build_valid_graph(self):
+        self.encoder_embedding = tf.get_variable(
+            name='encoder_embedding',
+            shape=[self.para.encoder_vocab_size, self.para.embedding_size],
+            dtype=self.dtype
+        )
+        # self.seed_song_embedded: [batch_size, embedding_size]
+        seed_song_embedded = tf.nn.embedding_lookup(
+            params=self.encoder_embedding,
+            ids=self.valid_seed_song_inputs
+        )
+        seed_song_embedded = tf.reshape(
+            seed_song_embedded,
+            [self.para.batch_size, 1, self.para.embedding_size, 1]
+        )
+        encoder_inputs_embedded = tf.nn.embedding_lookup(
+            params=self.encoder_embedding,
+            ids=self.valid_encoder_inputs
+        )
+        # self.encoder_inputs_embedded: [batch_size, max_len, embedding_size, 1]
+        encoder_inputs_embedded = tf.reshape(
+            encoder_inputs_embedded,
+            [self.para.batch_size, self.para.max_len, self.para.embedding_size, 1]
+        )
+        inputs_shape = tf.shape(encoder_inputs_embedded)
+
+        valid_conv1 = tf.nn.conv2d(
+            input=encoder_inputs_embedded,
+            filter=self.weights['w1'],
+            strides=[1, 1, 1, 1],
+            padding='VALID'
+        )
+        if self.para.batch_norm == 1:
+            valid_conv1_bn = self.batch_normalization(
+                valid_conv1,
+                self.offsets['o1'],
+                self.scales['s1'],
+                'conv1'
+            )
+        valid_conv1_relu = tf.nn.relu(valid_conv1_bn + self.biases['b1'])
+        valid_conv2 = tf.nn.conv2d(
+            input=valid_conv1_relu,
+            filter=self.weights['w2'],
+            strides=[1, 1, 1, 1],
+            padding='VALID'
+        )
+        if self.para.batch_norm == 1:
+            valid_conv2_bn = self.batch_normalization(
+                valid_conv2,
+                self.offsets['o2'],
+                self.scales['s2'],
+                'conv2'
+            )
+        valid_conv2_relu = tf.nn.relu(valid_conv2_bn + self.biases['b2'])
+        valid_conv3 = tf.nn.conv2d(
+            input=valid_conv2_relu,
+            filter=self.weights['w3'],
+            strides=[1, 1, 1, 1],
+            padding='VALID'
+        )
+        if self.para.batch_norm == 1:
+            valid_conv3_bn = self.batch_normalization(
+                valid_conv3,
+                self.offsets['o3'],
+                self.scales['s3'],
+                'conv3'
+            )
+        valid_conv3_relu = tf.nn.relu(valid_conv3_bn + self.biases['b3'])
+        valid_inv_conv3 = tf.nn.conv2d_transpose(
+            valid_conv3_relu,
+            self.weights['inv_w3'],
+            tf.shape(valid_conv2_relu),
+            strides=[1, 1, 1, 1],
+            padding='VALID'
+        )
+        valid_inv_conv3 = self.residual(valid_inv_conv3, valid_conv2)
+        if self.para.batch_norm == 1:
+            valid_inv_conv3_bn = self.batch_normalization(
+                valid_inv_conv3,
+                self.offsets['inv_o3'],
+                self.scales['inv_s3'],
+                'inv_conv3'
+            )
+        valid_inv_conv3_relu = tf.nn.relu(valid_inv_conv3_bn + self.biases['inv_b3'])
+        valid_inv_conv2 = tf.nn.conv2d_transpose(
+            valid_inv_conv3_relu,
+            self.weights['inv_w2'],
+            tf.shape(valid_conv1_relu),
+            strides=[1, 1, 1, 1],
+            padding='VALID'
+        )
+        valid_inv_conv2 = self.residual(valid_inv_conv2, valid_conv1)
+        if self.para.batch_norm == 1:
+            valid_inv_conv2_bn = self.batch_normalization(
+                valid_inv_conv2,
+                self.offsets['inv_o2'],
+                self.scales['inv_s2'],
+                'inv_conv2'
+            )
+        valid_inv_conv2_relu = tf.nn.relu(valid_inv_conv2_bn + self.biases['inv_b2'])
+        valid_inv_conv1 = tf.nn.conv2d_transpose(
+            valid_inv_conv2_relu,
+            self.weights['inv_w1'],
+            inputs_shape,
+            strides=[1, 1, 1, 1],
+            padding='VALID'
+        )
+        residual_outputs = self.residual(
+            valid_inv_conv1, encoder_inputs_embedded
+        )
+        residual_outputs = self.residual(
+            residual_outputs, seed_song_embedded
+        )
+        if self.para.batch_norm == 1:
+            valid_inv_conv1_bn = self.batch_normalization(
+                valid_inv_conv1,
+                self.offsets['inv_o1'],
+                self.scales['inv_s1'],
+                'inv_conv1'
+            )
+        valid_inv_conv1_relu = tf.nn.relu(valid_inv_conv1_bn + self.biases['inv_b1'])
+        embedding_outputs = tf.reshape(
+            residual_outputs,
+            [self.para.batch_size, self.para.max_len, self.para.embedding_size]
+        )
+        outputs = dense(
+            inputs=embedding_outputs,
+            units=self.para.decoder_vocab_size,
+            name='output_projection'
+        )
+
+        self.valid_loss = self.compute_loss(
+            logits=outputs,
+            labels=self.valid_decoder_targets
+        )
+        self.valid_loss /= self.para.max_len
+        self.valid_predicted_ids = self.get_predicted_ids(outputs)
 
     def residual(self, x, y):
         return tf.add(x, y)

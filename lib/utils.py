@@ -4,6 +4,7 @@ import numpy as np
 from copy import deepcopy
 from collections import defaultdict
 from math import sqrt
+from random import sample
 
 __all__ = ['dict_id_to_song_id',
            'read_testing_sequences',
@@ -37,6 +38,28 @@ def get_max_len(file_name):
     input_file = open(file_name, 'r').read().splitlines()
     input_file = [seq.split(' ') for seq in input_file]
     return max([len(seq) for seq in input_file])
+
+def read_valid_sequences(para):
+    encoder_file = open('./data/valid_ids_raw_data.txt', 'r').read().splitlines()
+    seed_file = open('./data/valid_ids_seed.txt', 'r').read().splitlines()
+    target_file = open('./data/valid_ids_rerank_data.txt', 'r').read().splitlines()
+
+    chosen_ids = sample(range(0, len(encoder_file)), para.batch_size)
+    encoder_inputs = []
+    seed_song_inputs = []
+    decoder_targets = []
+    for idx in chosen_ids:
+        encoder_inputs.append(encoder_file[idx].split(' '))
+        seed_song_inputs.append(seed_file[idx])
+        decoder_targets.append(target_file[idx].split(' '))
+
+    encoder_inputs = [seq + [0] * (para.max_len - len(seq)) for seq in \
+                      encoder_inputs]
+    seed_song_inputs = [int(num) for num in seed_song_inputs]
+    decoder_targets = [seq + [0] * (para.max_len - len(seq)) for seq in \
+                       decoder_targets]
+    return np.asarray(encoder_inputs), np.asarray(seed_song_inputs), \
+           np.asarray(decoder_targets)
 
 def read_testing_sequences(para):
     # filter for smybol that utf8 cannot decode
