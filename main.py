@@ -144,12 +144,18 @@ if __name__ == "__main__":
                                 precision, recall
                             ), end=' ')
 
-                            # if valid_loss < prev_valid:
-                            #     prev_valid = valid_loss
-                            if precision + recall > total_acc:
+                            # if precision + recall > total_acc:
+                            if valid_loss < prev_valid:
+                                prev_valid = valid_loss
                                 total_acc = precision + recall
                                 save_model(para, sess, model)
                                 print(' --> save model to {}'.format(para.model_dir))
+
+                                result_file = open(para.model_dir + '/result.txt', 'w')
+                                result_file.write('perplexity: {}\n'.format(np.exp(prev_valid)))
+                                result_file.write('precision: {}\n'.format(precision))
+                                result_file.write('recall: {}\n'.format(recall))
+                                result_file.close()
                             else:
                                 print()
 
