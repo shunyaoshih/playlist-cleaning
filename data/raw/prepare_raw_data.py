@@ -18,7 +18,10 @@ for seq in raw_seqs:
             vocab[word] += 1
         else:
             vocab[word] = 1
-vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
+# vocab_list = _START_VOCAB + sorted(vocab, key=vocab.get, reverse=True)
+vocab_list = sorted(vocab.items(), key=lambda t: t[::-1], reverse=True)
+vocab_list = [vocab_list[i][0] for i in range(total_num - 4)]
+vocab_list = _START_VOCAB + vocab_list
 if len(vocab_list) > total_num:
     vocab_list = vocab_list[:total_num]
 print('vocab size: {}'.format(len(vocab_list)))
@@ -56,7 +59,7 @@ y_file = open('./rerank_data.txt', 'w')
 
 counter = 0
 total_num = len(open('./x.txt', 'r').read().splitlines())
-for k, v in raw_dct.iteritems():
+for k, v in raw_dct.items():
     if k in rerank_dct and k in raw_dct:
         i = raw_dct[k]
         j = rerank_dct[k]
@@ -70,4 +73,4 @@ for k, v in raw_dct.iteritems():
 x_file.close()
 y_file.close()
 acc = 1.0 * counter / (1.0 * total_num) * 100.0
-print('data: %d / %d = %f' % (counter, total_num, acc))
+print('used data: {} / {} = {}%'.format(counter, total_num, counter / total_num * 100))
