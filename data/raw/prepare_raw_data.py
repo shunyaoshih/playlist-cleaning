@@ -60,7 +60,7 @@ for k, v in raw_dct.iteritems():
     if k in rerank_dct and k in raw_dct:
         i = raw_dct[k]
         j = rerank_dct[k]
-        if len(rerank_file[j]) <= 10:
+        if len(rerank_file[j]) < 32:
            continue
         x_file.write(k + ' ')
         x_file.write(' '.join(raw_file[i][2:]) + '\n')
