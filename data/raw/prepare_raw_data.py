@@ -56,7 +56,7 @@ y_file = open('./rerank_data.txt', 'w')
 
 counter = 0
 total_num = len(open('./x.txt', 'r').read().splitlines())
-for k, v in raw_dct.items():
+for k, v in raw_dct.iteritems():
     if k in rerank_dct and k in raw_dct:
         i = raw_dct[k]
         j = rerank_dct[k]
@@ -69,4 +69,5 @@ for k, v in raw_dct.items():
         counter += 1
 x_file.close()
 y_file.close()
-print('percentage of data we using: {}%'.format(counter / total_num * 100))
+acc = 1.0 * counter / (1.0 * total_num) * 100.0
+print('data: %d / %d = %f' % (counter, total_num, acc))

@@ -1,6 +1,6 @@
 # !/bin/bash
 cd data/raw
-python3 prepare_raw_data.py
+python2 prepare_raw_data.py
 python3 prepare_ids_data.py
 python3 prepare_song_ids_data.py
 cd ..
