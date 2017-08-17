@@ -15,6 +15,10 @@ from lib.utils import reward_functions
 from lib.multi_task_seq2seq_model import Multi_Task_Seq2Seq
 from lib.srcnn_model import SRCNN
 
+prev_valid_loss = 10 ** 10
+prev_precision = 0.0
+prev_recall = 0.0
+
 def config_setup():
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
@@ -29,6 +33,16 @@ def load_weights(para, sess, model):
         if ckpt:
             print('Loading model from %s' % ckpt.model_checkpoint_path)
             model.saver.restore(sess, ckpt.model_checkpoint_path)
+
+            # load prev_valid, prev_precision, prev_recall
+            input_file = open(para.model_dir + '/result.txt', 'r').read().splitlines()
+            input_file = [seq.split(' ') for seq in input_file]
+            prev_valid_loss = float(input_file[0][1])
+            prev_precision = float(input_file[1][1])
+            prev_recall = float(input_file[2][1])
+            print(prev_valid_loss)
+            print(prev_precision)
+            print(prev_recall)
         else:
             print('Loading model with fresh parameters')
             sess.run(tf.global_variables_initializer())
@@ -98,8 +112,6 @@ if __name__ == "__main__":
         try:
             if para.mode == 'train':
                 step_time = 0.0
-                prev_valid = 2 * para.decoder_vocab_size
-                total_acc = 0.0
                 for step in range(20000):
                     start_time = time.time()
 
@@ -144,10 +156,11 @@ if __name__ == "__main__":
                                 precision, recall
                             ), end=' ')
 
-                            # if precision + recall > total_acc:
-                            if valid_loss < prev_valid:
+                            # if precision + recall > prev_precision + prev_recall:
+                            if valid_loss < prev_valid_loss:
                                 prev_valid = valid_loss
-                                total_acc = precision + recall
+                                prev_precision = precision
+                                prev_recall = recall
                                 save_model(para, sess, model)
                                 print(' --> save model to {}'.format(para.model_dir))
 
