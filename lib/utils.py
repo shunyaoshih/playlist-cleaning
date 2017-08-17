@@ -133,6 +133,9 @@ def dict_id_to_song_id(para, predicted_ids):
        [dic[song_id] for song_id in seq if check_valid_song_id(song_id)]
        for seq in song_id_seqs
     ]
+    for i in range(len(song_id_seqs)):
+        if len(song_id_seqs[i]) == 0:
+            song_ids_seqs[i].append('0')
 
     song_id_seqs = [remove_duplicates(seq) for seq in song_id_seqs]
 
