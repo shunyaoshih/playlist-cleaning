@@ -40,9 +40,9 @@ def load_weights(para, sess, model):
             prev_valid_loss = float(input_file[0][1])
             prev_precision = float(input_file[1][1])
             prev_recall = float(input_file[2][1])
-            print(prev_valid_loss)
-            print(prev_precision)
-            print(prev_recall)
+            print('prev_valid_loss: {}'.format(prev_valid_loss))
+            print('prev_precision: {}'.format(prev_precision))
+            print('prev_recall: {}'.format(prev_recall))
         else:
             print('Loading model with fresh parameters')
             sess.run(tf.global_variables_initializer())
