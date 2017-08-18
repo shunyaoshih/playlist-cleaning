@@ -53,19 +53,25 @@ class SRCNN():
 
             encoder_inputs: [batch_size, max_len]
             encoder_inputs: [batch_size]
-            seed_song_inpuds: [batch_size]
+            seed_song_inpuds: [max_len]
             decoder_inputs: [batch_size, max_len]
             decoder_inputs_len: [batch_size]
             decoder_targets: [batch_size, max_len]
             sampled_ids_inputs:[batch_size, max_len]
             rewards: [batch_size]
+            artist_input: [batch_size, max_len]
+            genre_input: [batch_size, max_len]
+            seed_artist_input: [max_len]
+            seed_genre_input: [max_len]
         """
 
         print('set input nodes...')
         if self.para.mode == 'train' or self.para.mode == 'valid':
             self.raw_encoder_inputs, self.raw_encoder_inputs_len, \
             self.raw_decoder_inputs, self.raw_decoder_inputs_len, \
-            self.raw_seed_song_inputs = self.read_batch_sequences(self.para.mode)
+            self.raw_seed_song_inputs, self.raw_artist_inputs, \
+            self.raw_genre_inputs, self.raw_seed_artist_inputs, \
+            self.raw_seed_genre_inputs = self.read_batch_sequences(self.para.mode)
 
             self.encoder_inputs = self.raw_encoder_inputs
             self.encoder_inputs_len = self.raw_encoder_inputs_len
@@ -73,6 +79,11 @@ class SRCNN():
             self.decoder_inputs = self.raw_decoder_inputs
             self.decoder_inputs_len = self.raw_decoder_inputs_len
             self.decoder_targets = self.raw_decoder_inputs
+
+            self.artist_inputs = self.raw_artist_inputs
+            self.genre_inputs = self.raw_genre_inputs
+            self.seed_artist_inputs = self.raw_seed_artist_inputs
+            self.seed_genre_inputs = self.raw_seed_genre_inputs
 
             self.predict_count = tf.reduce_sum(self.decoder_inputs_len)
 
@@ -89,10 +100,28 @@ class SRCNN():
                     dtype=tf.int32, shape=(None, self.para.max_len),
                     name='valid_decoder_targets'
                 )
+                self.valid_artist_inputs = tf.placeholder(
+                    dtype=tf.int32, shape=(None, self.para.max_len),
+                    name='valid_artist_inputs'
+                )
+                self.valid_genre_inputs = tf.placeholder(
+                    dtype=tf.int32, shape=(None, self.para.max_len),
+                    name='valid_genre_inputs'
+                )
+                self.valid_seed_artist_inputs = tf.placeholder(
+                    dtype=tf.int32, shape=(None,),
+                    name='valid_seed_artist_inputs'
+                )
+                self.valid_seed_genre_inputs = tf.placeholder(
+                    dtype=tf.int32, shape=(None,),
+                    name='valid_seed_genre_inputs'
+                )
 
         elif self.para.mode == 'rl':
             self.raw_encoder_inputs, self.raw_encoder_inputs_len, _, _, \
-            self.raw_seed_song_inputs = self.read_batch_sequences('train')
+            self.raw_seed_song_inputs, self.raw_artist_inputs, \
+            self.raw_genre_inputs, self.raw_seed_artist_inputs, \
+            self.raw_seed_genre_inputs = self.read_batch_sequences('train')
 
             self.encoder_inputs = tf.placeholder(
                 dtype=tf.int32, shape=(None, self.para.max_len),
@@ -105,6 +134,22 @@ class SRCNN():
             self.seed_song_inputs = tf.placeholder(
                 dtype=tf.int32, shape=(None,),
                 name='seed_song_inputs'
+            )
+            self.artist_inputs = tf.placeholder(
+                dtype=tf.int32, shape=(None, self.para.max_len),
+                name='artist_inputs'
+            )
+            self.genre_inputs = tf.placeholder(
+                dtype=tf.int32, shape=(None, self.para.max_len),
+                name='genre_inputs'
+            )
+            self.seed_artist_inputs = tf.placeholder(
+                dtype=tf.int32, shape=(None,),
+                name='seed_artist_inputs'
+            )
+            self.seed_genre_inputs = tf.placeholder(
+                dtype=tf.int32, shape=(None,),
+                name='seed_genre_inputs'
             )
             self.sampled_ids_inputs = tf.placeholder(
                 dtype=tf.int32, shape=(None, self.para.max_len),
@@ -128,6 +173,22 @@ class SRCNN():
                 dtype=tf.int32, shape=(None,),
                 name='seed_song_inputs'
             )
+            self.artist_inputs = tf.placeholder(
+                dtype=tf.int32, shape=(None, self.para.max_len),
+                name='artist_inputs'
+            )
+            self.genre_inputs = tf.placeholder(
+                dtype=tf.int32, shape=(None, self.para.max_len),
+                name='genre_inputs'
+            )
+            self.seed_artist_inputs = tf.placeholder(
+                dtype=tf.int32, shape=(None,),
+                name='seed_artist_inputs'
+            )
+            self.seed_genre_inputs = tf.placeholder(
+                dtype=tf.int32, shape=(None,),
+                name='seed_genre_inputs'
+            )
 
     def build_graph(self):
         self.encoder_embedding = tf.get_variable(
@@ -148,6 +209,56 @@ class SRCNN():
             params=self.encoder_embedding,
             ids=self.encoder_inputs
         )
+
+        self.artist_embedding = tf.get_variable(
+            name='artist_embedding',
+            shape=[self.para.artist_size, self.para.embedding_size],
+            dtype=self.dtype
+        )
+        self.seed_artist_embedded = tf.nn.embedding_lookup(
+            params=self.artist_embedding,
+            ids=self.seed_artist_inputs
+        )
+        self.seed_artist_embedded = tf.reshape(
+            self.seed_artist_embedded,
+            [self.para.batch_size, 1, self.para.embedding_size, 1]
+        )
+        self.artist_inputs_embedded = tf.nn.embedding_lookup(
+            params=self.artist_embedding,
+            ids=self.artist_inputs
+        )
+
+        self.genre_embedding = tf.get_variable(
+            name='genre_embedding',
+            shape=[self.para.genre_size, self.para.embedding_size],
+            dtype=self.dtype
+        )
+        self.seed_genre_embedded = tf.nn.embedding_lookup(
+            params=self.genre_embedding,
+            ids=self.seed_genre_inputs
+        )
+        self.seed_genre_embedded = tf.reshape(
+            self.seed_genre_embedded,
+            [self.para.batch_size, 1, self.para.embedding_size, 1]
+        )
+        self.genre_inputs_embedded = tf.nn.embedding_lookup(
+            params=self.genre_embedding,
+            ids=self.genre_inputs
+        )
+
+        self.seed_song_embedded = tf.add(
+            self.seed_song_embedded, self.seed_artist_embedded
+        )
+        self.seed_song_embedded = tf.add(
+            self.seed_song_embedded, self.seed_genre_embedded
+        )
+        self.encoder_inputs_embedded = tf.add(
+            self.encoder_inputs_embedded, self.artist_inputs_embedded
+        )
+        self.encoder_inputs_embedded = tf.add(
+            self.encoder_inputs_embedded, self.genre_inputs_embedded
+        )
+
         # self.encoder_inputs_embedded: [batch_size, max_len, embedding_size, 1]
         self.encoder_inputs_embedded = tf.reshape(
             self.encoder_inputs_embedded,
@@ -334,6 +445,56 @@ class SRCNN():
             params=self.encoder_embedding,
             ids=self.valid_encoder_inputs
         )
+
+        self.artist_embedding = tf.get_variable(
+            name='artist_embedding',
+            shape=[self.para.artist_size, self.para.embedding_size],
+            dtype=self.dtype
+        )
+        seed_artist_embedded = tf.nn.embedding_lookup(
+            params=self.artist_embedding,
+            ids=self.valid_seed_artist_inputs
+        )
+        seed_artist_embedded = tf.reshape(
+            seed_artist_embedded,
+            [self.para.batch_size, 1, self.para.embedding_size, 1]
+        )
+        artist_inputs_embedded = tf.nn.embedding_lookup(
+            params=self.artist_embedding,
+            ids=self.valid_artist_inputs
+        )
+
+        self.genre_embedding = tf.get_variable(
+            name='genre_embedding',
+            shape=[self.para.genre_size, self.para.embedding_size],
+            dtype=self.dtype
+        )
+        seed_genre_embedded = tf.nn.embedding_lookup(
+            params=self.genre_embedding,
+            ids=self.valid_seed_genre_inputs
+        )
+        seed_genre_embedded = tf.reshape(
+            seed_genre_embedded,
+            [self.para.batch_size, 1, self.para.embedding_size, 1]
+        )
+        genre_inputs_embedded = tf.nn.embedding_lookup(
+            params=self.genre_embedding,
+            ids=self.valid_genre_inputs
+        )
+
+        seed_song_embedded = tf.add(
+            seed_song_embedded, seed_artist_embedded
+        )
+        seed_song_embedded = tf.add(
+            seed_song_embedded, seed_genre_embedded
+        )
+        encoder_inputs_embedded = tf.add(
+            encoder_inputs_embedded, artist_inputs_embedded
+        )
+        encoder_inputs_embedded = tf.add(
+            encoder_inputs_embedded, genre_inputs_embedded
+        )
+
         # self.encoder_inputs_embedded: [batch_size, max_len, embedding_size, 1]
         encoder_inputs_embedded = tf.reshape(
             encoder_inputs_embedded,
@@ -562,29 +723,36 @@ class SRCNN():
             ['./data/cnn_{}.tfrecords'.format(mode)]
         )
 
-        ei, ei_len, di, di_len, sid = self.read_one_sequence(file_queue)
+        ei, ei_len, di, di_len, sid, at, gn, sat, sgn = self.read_one_sequence(file_queue)
 
         min_after_dequeue = 3000
         capacity = min_after_dequeue + 3 * self.para.batch_size
 
         encoder_inputs, encoder_inputs_len, decoder_inputs, decoder_inputs_len, \
-        seed_ids = tf.train.shuffle_batch(
-            [ei, ei_len, di, di_len, sid],
+        seed_ids, artist_inputs, genre_inputs, seed_artist_inputs, \
+        seed_genre_inputs = tf.train.shuffle_batch(
+            [ei, ei_len, di, di_len, sid, at, gn, sat, sgn],
             batch_size=self.para.batch_size,
             capacity=capacity,
             min_after_dequeue=min_after_dequeue
         )
         encoder_inputs = tf.sparse_tensor_to_dense(encoder_inputs)
         decoder_inputs = tf.sparse_tensor_to_dense(decoder_inputs)
+        artist_inputs = tf.sparse_tensor_to_dense(artist_inputs)
+        genre_inputs = tf.sparse_tensor_to_dense(genre_inputs)
 
         encoder_inputs_len = tf.reshape(encoder_inputs_len,
                                         [self.para.batch_size])
         decoder_inputs_len = tf.reshape(decoder_inputs_len,
                                         [self.para.batch_size])
         seed_ids = tf.reshape(seed_ids, [self.para.batch_size])
+        seed_artist_inputs = tf.reshape(seed_artist_inputs, [self.para.batch_size])
+        seed_genre_inputs = tf.reshape(seed_genre_inputs, [self.para.batch_size])
 
         return encoder_inputs, tf.to_int32(encoder_inputs_len), \
-               decoder_inputs, tf.to_int32(decoder_inputs_len), seed_ids
+               decoder_inputs, tf.to_int32(decoder_inputs_len), seed_ids, \
+               artist_inputs, genre_inputs, seed_artist_inputs, \
+               seed_genre_inputs
 
     def read_one_sequence(self, file_queue):
         """ read one sequence from .tfrecords"""
@@ -598,12 +766,18 @@ class SRCNN():
             'encoder_input_len': tf.FixedLenFeature([1], tf.int64),
             'decoder_input': tf.VarLenFeature(tf.int64),
             'decoder_input_len': tf.FixedLenFeature([1], tf.int64),
-            'seed_ids': tf.FixedLenFeature([1], tf.int64)
+            'seed_ids': tf.FixedLenFeature([1], tf.int64),
+            'artist_input': tf.VarLenFeature(tf.int64),
+            'genre_input': tf.VarLenFeature(tf.int64),
+            'seed_artist_input': tf.FixedLenFeature([1], tf.int64),
+            'seed_genre_input': tf.FixedLenFeature([1], tf.int64),
         })
 
         return feature['encoder_input'], feature['encoder_input_len'], \
                feature['decoder_input'], feature['decoder_input_len'], \
-               feature['seed_ids']
+               feature['seed_ids'], feature['artist_input'], \
+               feature['genre_input'], feature['seed_artist_input'], \
+               feature['seed_genre_input']
 
     def build_weights(self):
         self.weights = {

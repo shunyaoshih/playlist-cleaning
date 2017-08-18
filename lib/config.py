@@ -22,6 +22,8 @@ def params_setup():
     parser.add_argument('--batch_size', type=int, default=32, help='')
     parser.add_argument('--encoder_vocab_size', type=int, default=-1, help='')
     parser.add_argument('--decoder_vocab_size', type=int, default=-1, help='')
+    parser.add_argument('--artist_size', type=int, default=-1, help='')
+    parser.add_argument('--genre_size', type=int, default=-1, help='')
     parser.add_argument('--embedding_size', type=int, default=128, help='')
     parser.add_argument('--max_len', type=int, default=210, help='')
     parser.add_argument('--debug', type=int, default=0, help='')
@@ -44,6 +46,8 @@ def params_setup():
 
     para.encoder_vocab_size = read_num_of_lines('data/vocab_default.txt')
     para.decoder_vocab_size = read_num_of_lines('data/vocab_default.txt')
+    para.artist_size = read_num_of_lines('data/artist.txt')
+    para.genre_size = read_num_of_lines('data/genre.txt')
 
     if para.nn == 'rnn':
         para.max_len -= 1

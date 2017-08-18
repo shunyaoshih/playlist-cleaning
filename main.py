@@ -133,8 +133,10 @@ if __name__ == "__main__":
                               end='')
 
                         if para.nn == 'cnn':
-                            encoder_inputs, seed_song_inputs, decoder_targets = \
-                                read_valid_sequences(para)
+                            encoder_inputs, seed_song_inputs, decoder_targets, \
+                            artist_inputs, genre_inputs, seed_artist_inputs, \
+                            seed_genre_inputs = read_valid_sequences(para)
+
                             [valid_loss, predicted_ids] = sess.run(
                                 fetches=[
                                     model.valid_loss,
@@ -144,6 +146,10 @@ if __name__ == "__main__":
                                     model.valid_encoder_inputs: encoder_inputs,
                                     model.valid_seed_song_inputs: seed_song_inputs,
                                     model.valid_decoder_targets: decoder_targets,
+                                    model.valid_artist_inputs: artist_inputs,
+                                    model.valid_genre_inputs: genre_inputs,
+                                    model.valid_seed_artist_inputs: seed_artist_inputs,
+                                    model.valid_seed_genre_inputs: seed_genre_inputs,
                                 }
                             )
                             print('valid perplexity: %.2f, ' % np.exp(valid_loss),
@@ -186,6 +192,10 @@ if __name__ == "__main__":
                         model.raw_encoder_inputs,
                         model.raw_encoder_inputs_len,
                         model.raw_seed_song_inputs,
+                        model.raw_artist_inputs,
+                        model.raw_genre_inputs,
+                        model.raw_seed_artist_inputs,
+                        model.raw_seed_genre_inputs,
                     ])
                     data = [e.astype(np.int32) for e in data]
 
@@ -198,6 +208,10 @@ if __name__ == "__main__":
                             model.encoder_inputs: data[0],
                             model.encoder_inputs_len: data[1],
                             model.seed_song_inputs: data[2],
+                            model.artist_inputs: data[3],
+                            model.genre_inputs: data[4],
+                            model.seed_artist_inputs: data[5],
+                            model.seed_genre_inputs: data[6]
                         }
                     )
 
@@ -213,6 +227,10 @@ if __name__ == "__main__":
                             model.encoder_inputs: data[0],
                             model.encoder_inputs_len: data[1],
                             model.seed_song_inputs: data[2],
+                            model.artist_inputs: data[3],
+                            model.genre_inputs: data[4],
+                            model.seed_artist_inputs: data[5],
+                            model.seed_genre_inputs: data[6],
                             model.sampled_ids_inputs: sampled_ids,
                             model.rewards: rewards
                         }
@@ -244,8 +262,9 @@ if __name__ == "__main__":
                     print('perplexity: %.2f' % perplexity)
 
             elif para.mode == 'test':
-                encoder_inputs, encoder_inputs_len, seed_song_inputs = \
-                    read_testing_sequences(para)
+                encoder_inputs, encoder_inputs_len, seed_song_inputs, \
+                artist_inputs, genre_inputs, seed_artist_inputs, \
+                seed_genre_inputs = read_testing_sequences(para)
 
                 [predicted_ids, decoder_outputs] = sess.run(
                     fetches=[
@@ -256,6 +275,10 @@ if __name__ == "__main__":
                         model.encoder_inputs: encoder_inputs,
                         model.encoder_inputs_len: encoder_inputs_len,
                         model.seed_song_inputs: seed_song_inputs,
+                        model.artist_inputs: artist_inputs,
+                        model.genre_inputs: genre_inputs,
+                        model.seed_artist_inputs: seed_artist_inputs,
+                        model.seed_genre_inputs: seed_genre_inputs,
                     }
                 )
 

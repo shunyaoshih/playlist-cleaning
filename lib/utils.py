@@ -41,6 +41,24 @@ def get_max_len(file_name):
     input_file = [seq.split(' ') for seq in input_file]
     return max([len(seq) for seq in input_file])
 
+def create_meta_dct():
+    input_file = open('./data/meta.txt', 'r').read().splitlines()
+    seqs = [seq.split(' ') for seq in input_file]
+    dct = {}
+    for seq in seqs:
+        dct[int(seq[0])] = [int(seq[1]), int(seq[2])]
+    dct[2] = [0, 0]
+    return dct
+
+def create_artist_and_genre_dct():
+    def parse_file(file_name):
+        input_file = open(file_name, 'r').read().splitlines()
+        dct = defaultdict(lambda: 0)
+        for i, ID in enumerate(input_file):
+            dct[int(ID)] = i
+        return dct
+    return parse_file('./data/artist.txt'), parse_file('./data/genre.txt')
+
 def read_valid_sequences(para):
     encoder_file = open('./data/valid_ids_raw_data.txt', 'r').read().splitlines()
     seed_file = open('./data/valid_ids_seed.txt', 'r').read().splitlines()
@@ -63,8 +81,37 @@ def read_valid_sequences(para):
 
     encoder_inputs = [[int(ID) for ID in seq] for seq in encoder_inputs]
     decoder_targets = [[int(ID) for ID in seq] for seq in decoder_targets]
+
+    meta_dct = create_meta_dct()
+    artist_dct, genre_dct = create_artist_and_genre_dct()
+    vocab_list = open('./data/vocab_default.txt', 'r').read().splitlines()
+    for i in range(4):
+        vocab_list[i] = 0
+    artist_inputs = []
+    genre_inputs = []
+    seed_artist_inputs = []
+    seed_genre_inputs = []
+
+    for i in range(len(encoder_inputs)):
+        artist_inputs.append(
+            [artist_dct[meta_dct[int(vocab_list[id])][0]]
+             for id in encoder_inputs[i]]
+        )
+        genre_inputs.append(
+            [genre_dct[meta_dct[int(vocab_list[id])][1]]
+             for id in encoder_inputs[i]]
+        )
+        seed_artist_inputs.append(
+            artist_dct[meta_dct[int(vocab_list[int(seed_song_inputs[i])])][0]]
+        )
+        seed_genre_inputs.append(
+            genre_dct[meta_dct[int(vocab_list[int(seed_song_inputs[i])])][1]]
+        )
+
     return np.asarray(encoder_inputs), np.asarray(seed_song_inputs), \
-           np.asarray(decoder_targets)
+           np.asarray(decoder_targets), np.asarray(artist_inputs), \
+           np.asarray(genre_inputs), np.asarray(seed_artist_inputs), \
+           np.asarray(seed_genre_inputs)
 
 def read_testing_sequences(para):
     # filter for smybol that utf8 cannot decode
@@ -94,7 +141,28 @@ def read_testing_sequences(para):
     para.batch_size = len(seqs)
     print('total num of sequences: %d' % len(seqs))
 
-    return np.asarray(seqs), np.asarray(seqs_len), np.asarray(seed_ids)
+    artist_dct, genre_dct = create_artist_and_genre_dct()
+    def parse_file(file_name):
+        input_file = open(file_name, 'r').read().splitlines()
+        input_file = [seq.split(' ') for seq in input_file]
+        input_file = [[int(ID) for ID in seq] for seq in input_file]
+        return input_file
+    artist_seqs = parse_file('results/artist.txt')
+    artist_seqs = [[artist_dct[ID] for ID in seq] for seq in artist_seqs]
+    artist_seqs = [np.array(seq + [0] * (para.max_len - len(seq)))
+                   for seq in artist_seqs]
+    genre_seqs = parse_file('results/genre.txt')
+    genre_seqs = [[genre_dct[ID] for ID in seq] for seq in genre_seqs]
+    genre_seqs = [np.array(seq + [0] * (para.max_len - len(seq)))
+                  for seq in genre_seqs]
+    seed_artist_seqs = parse_file('results/seed_artist.txt')
+    seed_artist_seqs = [artist_dct[seq[0]] for seq in seed_artist_seqs]
+    seed_genre_seqs = parse_file('results/seed_genre.txt')
+    seed_genre_seqs = [genre_dct[seq[0]] for seq in seed_genre_seqs]
+
+    return np.asarray(seqs), np.asarray(seqs_len), np.asarray(seed_ids), \
+           np.asarray(artist_seqs), np.asarray(genre_seqs), \
+           np.asarray(seed_artist_seqs), np.asarray(seed_genre_seqs)
 
 def check_valid_song_id(song_id):
     filter_list = [ 0, 1, 2, 3, -1]
