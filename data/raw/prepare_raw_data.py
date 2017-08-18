@@ -59,17 +59,23 @@ y_file = open('./rerank_data.txt', 'w')
 
 counter = 0
 total_num = len(open('./x.txt', 'r').read().splitlines())
+chosen_ids = []
 for k, v in raw_dct.items():
     if k in rerank_dct and k in raw_dct:
         i = raw_dct[k]
         j = rerank_dct[k]
         if len(rerank_file[j]) < 32:
            continue
+        chosen_ids.append(k)
+        counter += 1
+chosen_ids = sorted(chosen_ids, reverse=True)
+for k in chosen_ids:
+        i = raw_dct[k]
+        j = rerank_dct[k]
         x_file.write(k + ' ')
         x_file.write(' '.join(raw_file[i][2:]) + '\n')
         y_file.write(k + ' ')
         y_file.write(' '.join(rerank_file[j][2:]) + '\n')
-        counter += 1
 x_file.close()
 y_file.close()
 acc = 1.0 * counter / (1.0 * total_num) * 100.0
