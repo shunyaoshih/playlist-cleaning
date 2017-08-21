@@ -112,7 +112,7 @@ if __name__ == "__main__":
         try:
             if para.mode == 'train':
                 step_time = 0.0
-                for step in range(20000):
+                for step in range(1200):
                     start_time = time.time()
 
                     [loss, predict_count, _] = sess.run(
