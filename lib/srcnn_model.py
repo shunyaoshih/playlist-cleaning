@@ -249,15 +249,15 @@ class SRCNN():
         # self.seed_song_embedded = tf.add(
         #     self.seed_song_embedded, self.seed_artist_embedded
         # )
-        self.seed_song_embedded = tf.add(
-            self.seed_song_embedded, self.seed_genre_embedded
-        )
+        # self.seed_song_embedded = tf.add(
+        #     self.seed_song_embedded, self.seed_genre_embedded
+        # )
         # self.encoder_inputs_embedded = tf.add(
         #     self.encoder_inputs_embedded, self.artist_inputs_embedded
         # )
-        self.encoder_inputs_embedded = tf.add(
-            self.encoder_inputs_embedded, self.genre_inputs_embedded
-        )
+        # self.encoder_inputs_embedded = tf.add(
+        #     self.encoder_inputs_embedded, self.genre_inputs_embedded
+        # )
 
         # self.encoder_inputs_embedded: [batch_size, max_len, embedding_size, 1]
         self.encoder_inputs_embedded = tf.reshape(
@@ -485,15 +485,15 @@ class SRCNN():
         # seed_song_embedded = tf.add(
         #     seed_song_embedded, seed_artist_embedded
         # )
-        seed_song_embedded = tf.add(
-           seed_song_embedded, seed_genre_embedded
-        )
+        # seed_song_embedded = tf.add(
+        #     seed_song_embedded, seed_genre_embedded
+        # )
         # encoder_inputs_embedded = tf.add(
         #     encoder_inputs_embedded, artist_inputs_embedded
         # )
-        encoder_inputs_embedded = tf.add(
-           encoder_inputs_embedded, genre_inputs_embedded
-        )
+        # encoder_inputs_embedded = tf.add(
+        #     encoder_inputs_embedded, genre_inputs_embedded
+        # )
 
         # self.encoder_inputs_embedded: [batch_size, max_len, embedding_size, 1]
         encoder_inputs_embedded = tf.reshape(
