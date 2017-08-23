@@ -1,4 +1,4 @@
-total_num = 70000
+total_num = 50000
 
 _START_VOCAB = ['_PAD', '_BOS', '_EOS', '_UNK']
 
