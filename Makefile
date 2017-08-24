@@ -17,4 +17,4 @@ debug_test:
 	python3 main.py --mode test --debug 1
 
 clean:
-	rm -r rnn_models
+	rm data/raw/raw_data.txt data/raw/rerank_data.txt data/train* data/valid* data/test* data/*.tfrecords data/vocab_default.txt
