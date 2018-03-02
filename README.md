@@ -19,6 +19,24 @@ $ pip3 install -r requirements.txt
 # to install TensorFlow, you can refer to https://www.tensorflow.org/install/
 ```
 
+## Files you should prepare
+
+### data/raw/x.txt
+
+This file contains raw playlists.
+
+```
+[date_of_created_playlist] [song_id1] [song_id2] ....
+```
+
+### data/raw/y.txt
+
+This file contains rereanked playlists corresponding to data/raw/x.txt line by line.
+
+```
+[date_of_created_playlist] [song_id1] [song_id2] ....
+```
+
 ## Usage
 
 ### Prepare data
