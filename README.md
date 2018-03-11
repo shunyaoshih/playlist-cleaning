@@ -1,6 +1,6 @@
 # playlist-cleaning
 
-A cnn-based model for playlist cleaning and reranking
+A cnn-based model for playlist cleaning and reranking integrated with the structure of super-resolution neural network.
 
 This is one of my three projects during the internship at KKBOX. Note that
 although there is a Python file related to seq2seq model, this project had not
